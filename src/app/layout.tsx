@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import { Providers } from "@/components/Providers";
+import { isGoogleAuthConfigured } from "@/lib/auth";
 import "./globals.css";
 
 const beVietnam = Be_Vietnam_Pro({
@@ -21,10 +22,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Không set AUTH_GOOGLE_* → guest mode, ai vào cũng dùng được
+  const authEnabled = isGoogleAuthConfigured;
+
   return (
     <html lang="vi" className={`${beVietnam.variable} h-full`}>
       <body className={`${beVietnam.className} h-full overflow-hidden`}>
-        <Providers>{children}</Providers>
+        <Providers authEnabled={authEnabled}>{children}</Providers>
       </body>
     </html>
   );

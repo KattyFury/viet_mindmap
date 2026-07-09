@@ -5,6 +5,14 @@ Mindmap chuẩn từng khoảng cách — tối ưu tiếng Việt.
 **Folder:** `D:\Files\Claude\viet_mindmap`  
 **Slogan / brand:** VietMindmap · Local-first (Google auth optional)
 
+### Dùng trên web (không cần đăng nhập)
+
+https://kattyfury.github.io/viet_mindmap/
+
+- Ai mở link cũng dùng được ngay (guest)
+- Map lưu trên **trình duyệt** của từng người (`localStorage`)
+- Deploy tự động từ `master` → GitHub Pages
+
 ---
 
 ## Chạy 1 nút (nhanh nhất)
