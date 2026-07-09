@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Ẩn badge "N" (Next.js Dev Tools) góc màn hình khi dev
+  devIndicators: false,
 };
 
 export default nextConfig;
