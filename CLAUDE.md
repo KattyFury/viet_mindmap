@@ -70,6 +70,11 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 These were decided after repeated user corrections. **Do not change without explicit new instruction.**
 
+### Git / deploy (user dùng web app)
+- **Mỗi lần sửa xong** → `git commit` + **`git push` ngay** lên `origin` (đừng để commit chỉ nằm local).
+- Không hỏi “có push không?” — mặc định **luôn push** sau khi xong task (trừ khi user bảo giữ local).
+- Lý do: user xem qua web/GitHub Pages; local-only = họ không thấy fix.
+
 ### Text in boxes (`src/lib/text.ts`)
 - Max **2 lines**. Root: **20** chars/line (40 total). Child: **30** chars/line (60 total).
 - When full → **hard stop typing** (no more insert).
