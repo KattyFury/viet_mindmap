@@ -12,7 +12,7 @@ import { uid } from "@/lib/id";
 import {
   childrenOf,
   placeNewChild,
-  reflowSiblings,
+  reflowAll,
   relocateChild,
 } from "@/lib/layout";
 import { loadState, saveState } from "@/lib/storage";
@@ -147,28 +147,17 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
   hydrate: (userKey) => {
     const saved = loadState(userKey);
     if (saved) {
-      // Map cũ có up/down → chuyển sang left/right + reflow
+      // Map cũ: up/down → left/right; luôn reflowAll (subtree không chồng lấn)
       const maps = (saved.maps ?? []).map((map) => {
         let nodes = { ...map.nodes };
-        let dirty = false;
         for (const n of Object.values(nodes)) {
           if (n.direction !== "up" && n.direction !== "down") continue;
           const parent = n.parentId ? nodes[n.parentId] : null;
           const dir =
             parent && n.x < parent.x ? ("left" as const) : ("right" as const);
           nodes[n.id] = { ...n, direction: dir };
-          dirty = true;
         }
-        if (!dirty) return map;
-        const parents = new Set(
-          Object.values(nodes)
-            .map((n) => n.parentId)
-            .filter(Boolean) as string[]
-        );
-        for (const pid of parents) {
-          nodes = reflowSiblings(nodes, pid, "left");
-          nodes = reflowSiblings(nodes, pid, "right");
-        }
+        nodes = reflowAll(nodes, map.rootId);
         return { ...map, nodes, updatedAt: Date.now() };
       });
       const activeMapId =
@@ -323,9 +312,7 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
     const kill = collectSubtree(map.nodes, id);
     let nodes = { ...map.nodes };
     for (const k of kill) delete nodes[k];
-    if (parentId && direction) {
-      nodes = reflowSiblings(nodes, parentId, direction);
-    }
+    nodes = reflowAll(nodes, map.rootId);
     set({
       maps: updateActiveMap(get().maps, get().activeMapId, (m) => ({
         ...m,

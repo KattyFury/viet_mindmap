@@ -14,7 +14,7 @@ import type { Direction, MindNode } from "./types";
 export const EDGE_GAP = 100;
 export const EDGE_GAP_VERTICAL = 140;
 
-/** Hở mép giữa 2 sibling (cộng thêm vào size box khi xếp) */
+/** Hở mép giữa 2 sibling / 2 subtree kề nhau (cộng thêm vào size khi xếp) */
 export const SIBLING_EDGE_GAP = 72;
 
 /** Dig tối thiểu trên màn hình (px) — zoom nhỏ vẫn dính */
@@ -30,7 +30,7 @@ export function nodeBoxSize(node: MindNode): { w: number; h: number } {
 }
 
 /**
- * Khoảng cách TÂM–TÂM giữa siblings cùng hướng.
+ * Khoảng cách TÂM–TÂM giữa siblings cùng hướng (leaf, không tính subtree).
  * - Trên/dưới: xếp ngang → phải ≥ BOX_W + hở (trước dùng BASE_GAP=120 < BOX_W → chồng box)
  * - Trái/phải: xếp dọc → ≥ BOX_H + hở
  */
@@ -48,6 +48,13 @@ export function siblingCenterGap(
 /** @deprecated dùng siblingCenterGap */
 export function gapForLevel(level: number): number {
   return BASE_GAP * Math.pow(GAP_DECAY, Math.max(0, level - 1));
+}
+
+/** Hở mép giữa hai subtree kề nhau (cùng parent + hướng) */
+function siblingEdgeGap(level: number): number {
+  const decay = Math.pow(GAP_DECAY, Math.max(0, level - 1));
+  // Sàn tối thiểu để deep level không bị dính box
+  return Math.max(48, SIBLING_EDGE_GAP * decay);
 }
 
 export function branchOffset(
@@ -108,6 +115,90 @@ export function childrenOf(
     });
 }
 
+/** Toàn bộ id trong subtree (gồm root). */
+export function collectSubtreeIds(
+  nodes: Record<string, MindNode>,
+  rootId: string
+): string[] {
+  const out: string[] = [];
+  const stack = [rootId];
+  const seen = new Set<string>();
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (seen.has(cur) || !nodes[cur]) continue;
+    seen.add(cur);
+    out.push(cur);
+    for (const n of Object.values(nodes)) {
+      if (n.parentId === cur) stack.push(n.id);
+    }
+  }
+  return out;
+}
+
+/** Bounds mép ngoài của cả subtree (world coords). */
+export function subtreeBounds(
+  nodes: Record<string, MindNode>,
+  rootId: string
+): { minX: number; minY: number; maxX: number; maxY: number } {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const id of collectSubtreeIds(nodes, rootId)) {
+    const n = nodes[id];
+    const { w, h } = nodeBoxSize(n);
+    minX = Math.min(minX, n.x - w / 2);
+    minY = Math.min(minY, n.y - h / 2);
+    maxX = Math.max(maxX, n.x + w / 2);
+    maxY = Math.max(maxY, n.y + h / 2);
+  }
+  if (!Number.isFinite(minX)) {
+    return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+/** Dời cả subtree (giữ cấu trúc tương đối). */
+export function shiftSubtree(
+  nodes: Record<string, MindNode>,
+  rootId: string,
+  dx: number,
+  dy: number
+): Record<string, MindNode> {
+  if (dx === 0 && dy === 0) return nodes;
+  const next = { ...nodes };
+  for (const id of collectSubtreeIds(nodes, rootId)) {
+    const n = next[id];
+    next[id] = { ...n, x: n.x + dx, y: n.y + dy };
+  }
+  return next;
+}
+
+function findRootId(nodes: Record<string, MindNode>): string | null {
+  for (const n of Object.values(nodes)) {
+    if (n.parentId === null) return n.id;
+  }
+  return null;
+}
+
+/**
+ * Reflow toàn bộ cây từ root — bottom-up theo chiều cao subtree.
+ * Rule: box/subtree **không được chồng lấn**; sibling cách nhau ≥ siblingEdgeGap.
+ * Stack canh giữa parent; nhánh phía trên bị đẩy lên, phía dưới đẩy xuống.
+ */
+export function reflowAll(
+  nodes: Record<string, MindNode>,
+  rootId?: string
+): Record<string, MindNode> {
+  const rid = rootId ?? findRootId(nodes);
+  if (!rid || !nodes[rid]) return nodes;
+  return reflowDescendants(nodes, rid);
+}
+
+/**
+ * Xếp sibling cùng parent+hướng theo **chiều cao cả subtree** (không chỉ 1 box).
+ * Gọi sau khi descendant của từng sibling đã reflow (bottom-up).
+ */
 export function reflowSiblings(
   nodes: Record<string, MindNode>,
   parentId: string,
@@ -120,26 +211,62 @@ export function reflowSiblings(
   if (siblings.length === 0) return nodes;
 
   const level = siblings[0].level;
-  const gap = siblingCenterGap(direction, level);
+  const gap = siblingEdgeGap(level);
   const off = branchOffset(direction, parent, level);
-  const next = { ...nodes };
+  let next = { ...nodes };
   const n = siblings.length;
 
-  siblings.forEach((sib, i) => {
-    const t = i - (n - 1) / 2;
-    let x = parent.x + off.x;
-    let y = parent.y + off.y;
-
+  // Extent phía "trước" / "sau" tâm sibling (mép subtree), theo trục xếp
+  const metrics = siblings.map((sib) => {
+    const cur = next[sib.id];
+    const b = subtreeBounds(next, sib.id);
     if (direction === "left" || direction === "right") {
-      // Xếp dọc
-      y = parent.y + t * gap;
-    } else {
-      // up/down: xếp ngang — gap ≥ bề ngang box
-      x = parent.x + t * gap;
+      return {
+        id: sib.id,
+        before: cur.y - b.minY, // phía trên
+        after: b.maxY - cur.y, // phía dưới
+      };
     }
-
-    next[sib.id] = { ...sib, x, y, siblingOrder: i };
+    return {
+      id: sib.id,
+      before: cur.x - b.minX, // phía trái
+      after: b.maxX - cur.x, // phía phải
+    };
   });
+
+  // Tọa độ tâm tạm (trục xếp), origin = 0 cho sibling đầu
+  const centers: number[] = new Array(n);
+  centers[0] = 0;
+  for (let i = 1; i < n; i++) {
+    // Đáy subtree trước + gap + đỉnh subtree sau → không chồng lấn
+    centers[i] =
+      centers[i - 1] + metrics[i - 1].after + gap + metrics[i].before;
+  }
+
+  // Canh giữa cụm theo parent (nửa trên bị đẩy lên / nửa dưới đẩy xuống)
+  const stackMin = centers[0] - metrics[0].before;
+  const stackMax = centers[n - 1] + metrics[n - 1].after;
+  const stackMid = (stackMin + stackMax) / 2;
+
+  if (direction === "left" || direction === "right") {
+    const origin = parent.y - stackMid;
+    for (let i = 0; i < n; i++) {
+      const sib = next[siblings[i].id];
+      const targetX = parent.x + off.x;
+      const targetY = centers[i] + origin;
+      next = shiftSubtree(next, sib.id, targetX - sib.x, targetY - sib.y);
+      next[sib.id] = { ...next[sib.id], siblingOrder: i };
+    }
+  } else {
+    const origin = parent.x - stackMid;
+    for (let i = 0; i < n; i++) {
+      const sib = next[siblings[i].id];
+      const targetX = centers[i] + origin;
+      const targetY = parent.y + off.y;
+      next = shiftSubtree(next, sib.id, targetX - sib.x, targetY - sib.y);
+      next[sib.id] = { ...next[sib.id], siblingOrder: i };
+    }
+  }
 
   return next;
 }
@@ -193,14 +320,17 @@ export function relocateChild(
     oldSide.forEach((sib, i) => {
       next[sib.id] = { ...next[sib.id], siblingOrder: i };
     });
-    next = reflowSiblings(next, parent.id, oldDir);
   }
 
-  next = reflowSiblings(next, parent.id, newDir);
-  next = reflowDescendants(next, id);
+  // Reflow cả cây: subtree spacing + không chồng chéo giữa các nhánh
+  next = reflowAll(next);
   return next;
 }
 
+/**
+ * Bottom-up: reflow descendant trước, rồi xếp sibling theo chiều cao subtree.
+ * → nhánh dày (nhiều cháu) đẩy các dự án phía trên lên / phía dưới xuống, không lấn.
+ */
 function reflowDescendants(
   nodes: Record<string, MindNode>,
   rootId: string
@@ -209,10 +339,10 @@ function reflowDescendants(
   for (const dir of BRANCH_DIRECTIONS) {
     const kids = childrenOf(next, rootId, dir);
     if (kids.length === 0) continue;
-    next = reflowSiblings(next, rootId, dir);
     for (const k of kids) {
       next = reflowDescendants(next, k.id);
     }
+    next = reflowSiblings(next, rootId, dir);
   }
   return next;
 }
@@ -250,7 +380,8 @@ export function placeNewChild(
     [childId]: child,
   };
 
-  next = reflowSiblings(next, parentId, direction);
+  // Cả cây: parent/anh em nhánh khác cũng nhường chỗ theo subtree
+  next = reflowAll(next);
   return next;
 }
 

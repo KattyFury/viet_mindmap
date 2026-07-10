@@ -97,6 +97,7 @@ These were decided after repeated user corrections. **Do not change without expl
 - Sibling order = creation order (`siblingOrder`), not sort-by-x/y.
 - No CSS `transform: scale` on text; scale size/font in layout.
 - Border-radius **scales with zoom** (not fixed `rem`).
+- **No overlap (LOCKED):** boxes / subtrees must never overlap. Reflow is bottom-up by **full subtree height** (`reflowAll` / `reflowSiblings` in `layout.ts`), not single-box gap only. Adjacent sibling subtrees keep ≥ `SIBLING_EDGE_GAP` (with decay floor). Stack is centered on parent → upper branches are pushed **up**, lower ones **down**. After add / delete / relocate / migrate, always `reflowAll` from root.
 
 ### Before changing text or lines
 1. Re-read this section.
