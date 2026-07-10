@@ -55,9 +55,9 @@ Mở http://localhost:3000
 
 ---
 
-## Tính năng đã chốt (v1 “tạm hài lòng”)
+## Tính năng đã chốt (v1)
 
-### Layout
+### Layout UI
 - Sidebar ~300px · main 4/5
 - Account: chỉ email, căn giữa
 - Thùng rác: “Kéo map vào để xóa”, confirm xóa
@@ -69,14 +69,30 @@ Mở http://localhost:3000
 - **Chỉ nhánh trái / phải** (không trên/dưới)
 - [+] 2 hướng (root) / 1 hướng còn lại (child)
 - Line **thẳng**, dưới box, dig vào mép
-- Spacing: parent–child + sibling theo size box (thoáng)
 - Zoom (wheel, scale size/font — không CSS scale chữ mờ) + pan
 - Kéo child: đổi trái↔phải / reorder sibling; **ẩn line khi kéo**
-- Tab = tạo nhánh con của node đang chọn (cùng hướng; root → phải)
-- Enter = xong type · **Ctrl+Enter** = xuống dòng
-- Delete = xóa subtree (kể cả khi đang type child) · Backspace = xóa text · Ctrl+Z/Y
-- Text: 2 dòng · root 20/dòng · child 30/dòng · full thì chặn gõ · wrap theo **từ** (không cắt “chó”)
 - Download PNG full map + margin
+
+### Spacing / không chồng lấn
+- Reflow **bottom-up theo chiều cao cả subtree** (`reflowAll`) — box không được đè nhau
+- Hở sibling (mép subtree): `SIBLING_EDGE_GAP = 36` (đã giảm ½ so với 72 vì map loãng), sàn 24
+- Parent→child: `EDGE_GAP = 100`
+- Hydrate / add / xóa / kéo → luôn reflow cả cây từ root
+
+### Phím tắt
+| Phím | Việc |
+|------|------|
+| **Tab** | Tạo **con của node đang chọn** (đi sâu), cùng hướng; root → phải |
+| **Enter** | Xong type (commit) |
+| **Ctrl+Enter** | Xuống dòng |
+| **Delete** | Xóa child + subtree **kể cả đang type** (không xóa root) |
+| **Backspace** | Ngoài type: xóa text · Trong type: xóa ký tự |
+| **Ctrl+Z / Y** | Undo / redo |
+| Cuộn | Zoom |
+
+### Text
+- 2 dòng · root 20 ký tự/dòng · child 30/dòng
+- Full → chặn gõ · wrap theo **từ** (không cắt giữa “chó”) · IME VN an toàn
 
 ### Màu (6, bỏ chàm)
 Đỏ · Cam · Vàng · Lục · Lam · Tím
@@ -85,7 +101,8 @@ Mở http://localhost:3000
 
 ## Rule khóa (đọc trước khi sửa)
 
-Xem **`CLAUDE.md` §5 VietMindmap — LOCKED RULES**.
+Xem **`CLAUDE.md` §5** và **`AGENTS.md`**.  
+Agent: sửa xong **commit + push ngay** (user dùng web app).
 
 ---
 
@@ -119,4 +136,5 @@ Supabase: chưa gắn — schema JSON tree sẵn để sync sau.
 
 - `npm run build` — kiểm tra TypeScript
 - Dev indicator Next “N” đã tắt (`devIndicators: false`)
-- Map cũ có up/down: hydrate tự đổi sang left/right + reflow
+- Map cũ có up/down: hydrate tự đổi sang left/right + **reflowAll**
+- Repo: https://github.com/KattyFury/viet_mindmap · branch deploy: `master`

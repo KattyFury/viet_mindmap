@@ -102,9 +102,23 @@ These were decided after repeated user corrections. **Do not change without expl
 - Sibling order = creation order (`siblingOrder`), not sort-by-x/y.
 - No CSS `transform: scale` on text; scale size/font in layout.
 - Border-radius **scales with zoom** (not fixed `rem`).
-- **No overlap (LOCKED):** boxes / subtrees must never overlap. Reflow is bottom-up by **full subtree height** (`reflowAll` / `reflowSiblings` in `layout.ts`), not single-box gap only. Adjacent sibling subtrees keep ≥ `SIBLING_EDGE_GAP` (with decay floor). Stack is centered on parent → upper branches are pushed **up**, lower ones **down**. After add / delete / relocate / migrate, always `reflowAll` from root.
+- **No overlap (LOCKED):** boxes / subtrees must never overlap. Reflow is bottom-up by **full subtree height** (`reflowAll` / `reflowSiblings` in `layout.ts`), not single-box gap only. Adjacent sibling subtrees keep ≥ `SIBLING_EDGE_GAP` (with decay floor). Stack is centered on parent → upper branches are pushed **up**, lower ones **down**. After add / delete / relocate / migrate / hydrate, always `reflowAll` from root.
+- **Spacing (đã chỉnh):** `SIBLING_EDGE_GAP = 36` (từng 72, giảm ½ vì map loãng), sàn `siblingEdgeGap` = **24**. Parent→child: `EDGE_GAP = 100`, `EDGE_GAP_VERTICAL = 140`. Đừng nới gap trừ khi user bảo.
 
-### Before changing text or lines
+### Phím tắt (LOCKED — đã sửa theo feedback user)
+| Phím | Hành vi |
+|------|---------|
+| **Tab** | Tạo **child của node đang chọn** (đi sâu), cùng hướng nhánh; root/không hướng → phải. **Không** tạo sibling từ mother. |
+| **Enter** (khi type) | Commit text, xong type |
+| **Ctrl/Cmd+Enter** | Xuống dòng trong box |
+| **Delete** | Xóa **child** (+ subtree), **kể cả khi đang type**. **Không** xóa root. |
+| **Backspace** (không type) | Xóa text node; khi type = xóa ký tự bình thường |
+| **Ctrl/Cmd+Z / Y** | Undo / redo (không khi focus field) |
+| Kéo child | Đổi trái↔phải + reorder sibling; ẩn line khi kéo |
+
+Implement: canvas `addChildOfSelected` + `MindNodeBox` Tab/Delete khi edit.
+
+### Before changing text, lines, layout, or shortcuts
 1. Re-read this section.
 2. State which locked rule is affected.
 3. Prefer a minimal fix; do not flip to the opposite extreme of the last bug.
