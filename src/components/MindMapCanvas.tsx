@@ -133,12 +133,16 @@ export function MindMapCanvas() {
         return;
       }
 
+      // Delete: xóa child kể cả khi đang type (root không xóa)
+      if (e.key === "Delete") {
+        if (selectedId === map.rootId) return;
+        e.preventDefault();
+        deleteSubtree(selectedId);
+        return;
+      }
+
       if (inField) return;
 
-      if (e.key === "Delete") {
-        e.preventDefault();
-        if (selectedId !== map.rootId) deleteSubtree(selectedId);
-      }
       if (e.key === "Backspace") {
         e.preventDefault();
         clearText(selectedId);
@@ -268,7 +272,7 @@ export function MindMapCanvas() {
           <span className="hidden text-[#DEE2E6] sm:inline" aria-hidden>
             |
           </span>
-          <span>Delete = xóa</span>
+          <span>Delete = xóa nhánh</span>
           <span className="hidden text-[#DEE2E6] sm:inline" aria-hidden>
             |
           </span>
@@ -358,6 +362,11 @@ export function MindMapCanvas() {
                 onTextChange={(text) => updateText(node.id, text)}
                 onAutoEditConsumed={clearPendingEdit}
                 onTabCreateSibling={addChildOfSelected}
+                onDelete={
+                  node.parentId
+                    ? () => deleteSubtree(node.id)
+                    : undefined
+                }
                 onRelocate={
                   node.parentId
                     ? (x, y) => relocateChildDrag(node.id, x, y)

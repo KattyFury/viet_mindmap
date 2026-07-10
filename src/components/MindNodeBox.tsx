@@ -42,6 +42,8 @@ interface MindNodeBoxProps {
   onAutoEditConsumed: () => void;
   /** Tab khi đang edit → lưu chữ + tạo child của node này (cùng hướng nhánh) */
   onTabCreateSibling: () => void;
+  /** Delete khi đang type (chỉ child) → xóa cả subtree */
+  onDelete?: () => void;
   /** Kéo thả child → đổi bên / reorder (world coords) */
   onRelocate?: (worldX: number, worldY: number) => void;
   /** Báo đang kéo — canvas ẩn line (không để line “mồ côi” vị trí cũ) */
@@ -61,6 +63,7 @@ export function MindNodeBox({
   onTextChange,
   onAutoEditConsumed,
   onTabCreateSibling,
+  onDelete,
   onRelocate,
   onDragActiveChange,
 }: MindNodeBoxProps) {
@@ -345,6 +348,14 @@ export function MindNodeBox({
                 onTextChange(clamp(draft));
                 setEditing(false);
                 onTabCreateSibling();
+                return;
+              }
+              // Delete khi đang type child → xóa node (không xóa root)
+              if (e.key === "Delete" && !isRoot && onDelete) {
+                e.preventDefault();
+                e.stopPropagation();
+                setEditing(false);
+                onDelete();
                 return;
               }
               if (e.key === "Enter") {

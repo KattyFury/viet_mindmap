@@ -74,7 +74,7 @@ Mở http://localhost:3000
 - Kéo child: đổi trái↔phải / reorder sibling; **ẩn line khi kéo**
 - Tab = tạo nhánh con của node đang chọn (cùng hướng; root → phải)
 - Enter = xong type · **Ctrl+Enter** = xuống dòng
-- Delete = xóa subtree · Backspace = xóa text · Ctrl+Z/Y
+- Delete = xóa subtree (kể cả khi đang type child) · Backspace = xóa text · Ctrl+Z/Y
 - Text: 2 dòng · root 20/dòng · child 30/dòng · full thì chặn gõ · wrap theo **từ** (không cắt “chó”)
 - Download PNG full map + margin
 
