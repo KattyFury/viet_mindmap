@@ -15,7 +15,7 @@ export const EDGE_GAP = 100;
 export const EDGE_GAP_VERTICAL = 140;
 
 /** Hở mép giữa 2 sibling / 2 subtree kề nhau (cộng thêm vào size khi xếp) */
-export const SIBLING_EDGE_GAP = 72;
+export const SIBLING_EDGE_GAP = 36;
 
 /** Dig tối thiểu trên màn hình (px) — zoom nhỏ vẫn dính */
 const MIN_SCREEN_DIG = 3;
@@ -54,7 +54,7 @@ export function gapForLevel(level: number): number {
 function siblingEdgeGap(level: number): number {
   const decay = Math.pow(GAP_DECAY, Math.max(0, level - 1));
   // Sàn tối thiểu để deep level không bị dính box
-  return Math.max(48, SIBLING_EDGE_GAP * decay);
+  return Math.max(24, SIBLING_EDGE_GAP * decay);
 }
 
 export function branchOffset(
