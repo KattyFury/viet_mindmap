@@ -72,7 +72,7 @@ Mở http://localhost:3000
 - Spacing: parent–child + sibling theo size box (thoáng)
 - Zoom (wheel, scale size/font — không CSS scale chữ mờ) + pan
 - Kéo child: đổi trái↔phải / reorder sibling; **ẩn line khi kéo**
-- Tab = nhánh cùng hướng (root → phải)
+- Tab = tạo nhánh con của node đang chọn (cùng hướng; root → phải)
 - Enter = xong type · **Ctrl+Enter** = xuống dòng
 - Delete = xóa subtree · Backspace = xóa text · Ctrl+Z/Y
 - Text: 2 dòng · root 20/dòng · child 30/dòng · full thì chặn gõ · wrap theo **từ** (không cắt “chó”)

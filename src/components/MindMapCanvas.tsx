@@ -82,16 +82,19 @@ export function MindMapCanvas() {
     };
   }, [map?.id]);
 
-  /** Tab = nhánh mới cùng hướng (trái/phải/…); root → phải */
-  const addSiblingSameDir = useCallback(() => {
+  /**
+   * Tab = tạo child **của node đang chọn** (đi sâu), cùng hướng nhánh.
+   * Root / chưa có hướng → phải. (Trước đây Tab = sibling từ mother — sai kỳ vọng.)
+   */
+  const addChildOfSelected = useCallback(() => {
     if (!map || !selectedId) return;
     const node = map.nodes[selectedId];
     if (!node) return;
-    if (node.parentId && node.direction) {
-      addChild(node.parentId, node.direction);
-    } else {
-      addChild(node.id, "right");
-    }
+    const dir =
+      node.direction === "left" || node.direction === "right"
+        ? node.direction
+        : "right";
+    addChild(node.id, dir);
   }, [map, selectedId, addChild]);
 
   useEffect(() => {
@@ -126,7 +129,7 @@ export function MindMapCanvas() {
         !e.metaKey
       ) {
         e.preventDefault();
-        addSiblingSameDir();
+        addChildOfSelected();
         return;
       }
 
@@ -151,7 +154,7 @@ export function MindMapCanvas() {
     deleteSubtree,
     clearText,
     addChild,
-    addSiblingSameDir,
+    addChildOfSelected,
   ]);
 
   const onWheel = useCallback((e: React.WheelEvent) => {
@@ -257,7 +260,7 @@ export function MindMapCanvas() {
           <span className="hidden text-[#DEE2E6] sm:inline" aria-hidden>
             |
           </span>
-          <span>Tab = nhánh cùng hướng</span>
+          <span>Tab = tạo nhánh con</span>
           <span className="hidden text-[#DEE2E6] sm:inline" aria-hidden>
             |
           </span>
@@ -354,7 +357,7 @@ export function MindMapCanvas() {
                 onAdd={(dir: Direction) => addChild(node.id, dir)}
                 onTextChange={(text) => updateText(node.id, text)}
                 onAutoEditConsumed={clearPendingEdit}
-                onTabCreateSibling={addSiblingSameDir}
+                onTabCreateSibling={addChildOfSelected}
                 onRelocate={
                   node.parentId
                     ? (x, y) => relocateChildDrag(node.id, x, y)

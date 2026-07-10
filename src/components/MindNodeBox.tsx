@@ -40,7 +40,7 @@ interface MindNodeBoxProps {
   onAdd: (dir: Direction) => void;
   onTextChange: (text: string) => void;
   onAutoEditConsumed: () => void;
-  /** Tab khi đang edit → lưu chữ + tạo nhánh cùng hướng */
+  /** Tab khi đang edit → lưu chữ + tạo child của node này (cùng hướng nhánh) */
   onTabCreateSibling: () => void;
   /** Kéo thả child → đổi bên / reorder (world coords) */
   onRelocate?: (worldX: number, worldY: number) => void;
