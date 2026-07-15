@@ -11,18 +11,23 @@ const beVietnam = Be_Vietnam_Pro({
   display: "swap",
 });
 
+// GitHub Pages static export dùng basePath /viet_mindmap — icon phải kèm basePath
+// (href="/mindmap.png" sẽ trỏ nhầm ra kattyfury.github.io/mindmap.png → 404)
+const basePath = process.env.GITHUB_PAGES === "true" ? "/viet_mindmap" : "";
+const iconUrl = `${basePath}/mindmap.png`;
+
 export const metadata: Metadata = {
   title: "VietMindmap",
   description:
     "Mindmap chuẩn từng khoảng cách – Tối ưu tiếng Việt",
   icons: {
     icon: [
-      { url: "/mindmap.png", type: "image/png", sizes: "512x512" },
+      { url: iconUrl, type: "image/png", sizes: "512x512" },
     ],
     apple: [
-      { url: "/mindmap.png", type: "image/png", sizes: "512x512" },
+      { url: iconUrl, type: "image/png", sizes: "512x512" },
     ],
-    shortcut: "/mindmap.png",
+    shortcut: iconUrl,
   },
   appleWebApp: {
     capable: true,
