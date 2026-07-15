@@ -15,6 +15,20 @@ export const metadata: Metadata = {
   title: "VietMindmap",
   description:
     "Mindmap chuẩn từng khoảng cách – Tối ưu tiếng Việt",
+  icons: {
+    icon: [
+      { url: "/mindmap.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [
+      { url: "/mindmap.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/mindmap.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "VietMindmap",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
