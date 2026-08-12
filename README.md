@@ -93,7 +93,7 @@ Mở http://localhost:3000
 
 ### Text
 - **Không giới hạn ký tự/dòng** — chỉ giới hạn số dòng: root **2 dòng**, child **3 dòng**
-- Root căn giữa · child căn **trái**
+- Root và child đều căn giữa
 - Wrap theo width thật của box (CSS), full → chặn gõ (đo chiều cao thật, không đếm ký tự) · wrap theo **từ** (không cắt giữa “chó”) · IME VN an toàn
 
 ### Màu (6, bỏ chàm)

@@ -247,7 +247,7 @@ export function MindNodeBox({
     fontSize,
     fontWeight: 600,
     lineHeight: LINE_HEIGHT,
-    textAlign: isRoot ? "center" : "left",
+    textAlign: "center",
     // break-spaces (không phải pre-wrap): space cuối dòng KHÔNG được "hang" ra
     // ngoài box — nếu không, gõ space liên tục lúc box đầy vẫn lọt qua vô hạn.
     whiteSpace: "break-spaces",
@@ -506,7 +506,7 @@ export function MindNodeBox({
                   fontWeight: 600,
                   color: fg,
                   WebkitTextFillColor: fg,
-                  textAlign: isRoot ? "center" : "left",
+                  textAlign: "center",
                 }}
               >
                 {clamp(node.text)}

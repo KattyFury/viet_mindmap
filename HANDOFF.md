@@ -30,7 +30,7 @@ Mindmap 1 trang, tối ưu cho tiếng Việt (wrap không cắt giữa từ), c
 - **Không chồng lấn:** `reflowAll` bottom-up theo chiều cao cả subtree (`src/lib/layout.ts`); mọi add/xóa/kéo/hydrate đều reflow lại từ root.
 - **Phím tắt:** Tab = tạo child của node đang chọn (không phải sibling từ mother) · Enter = commit · Ctrl+Enter = xuống dòng · Delete = xóa child+subtree kể cả đang type (không xóa root) · Ctrl+Z/Y = undo/redo · cuộn = zoom.
 - **Export:** PNG full map qua `html-to-image` (`src/lib/export-png.ts`) — render thẳng từ DOM đang hiển thị, không có pipeline canvas riêng.
-- **Text trong box (đại tu 2026-08-12 — xem mục 2):** không giới hạn ký tự, chỉ giới hạn số dòng (root 2, child 3), root center/child left, chặn gõ khi box đầy theo chiều cao thật.
+- **Text trong box (đại tu 2026-08-12 — xem mục 2):** không giới hạn ký tự, chỉ giới hạn số dòng (root 2, child 3), **cả root và child đều center** (child từng đổi sang left cùng ngày, user revert lại center ngay sau đó — LOCKED, đừng tự đổi lại left), chặn gõ khi box đầy theo chiều cao thật.
 
 ---
 
@@ -45,7 +45,7 @@ Mindmap 1 trang, tối ưu cho tiếng Việt (wrap không cắt giữa từ), c
 - **"Đầy" = đo `scrollHeight` thật** của textarea, so với `maxLines * linePx`. Vượt → revert DOM value ngay trong `onChange` (trước khi paint, không giật hình), không cho gõ thêm. Hàm đo: `measureLinesAtCurrentValue()` trong `MindNodeBox.tsx`.
 - `ROOT_MAX_LINES=2`, `CHILD_MAX_LINES=3` (`src/lib/constants.ts`) — tách riêng thay vì 1 `MAX_LINES` chung.
 - `src/lib/text.ts` rút gọn còn 3 hàm: `capExplicitBreaks` (an toàn cho data cũ có thể dư newline), `canInsertNewline`, `estimateLineCount` (ước lượng lần render đầu, trước khi đo DOM thật).
-- Text align: **root = center, child = left** (`textAlign` theo `isRoot`).
+- Text align: ban đầu làm **root = center, child = left** (`textAlign` theo `isRoot`) — nhưng user không thích, đổi lại **cả 2 đều center** ngay trong cùng phiên (xem mục 2b).
 
 **2 bug tự bắt được trong lúc làm (đáng nhớ nếu sửa lại):**
 1. **`scrollHeight` bị "sàn" bởi height cố định của box.** Đo thẳng `el.scrollHeight` khi box có `height: h` (CSS cố định) luôn ≥ `h` bất kể nội dung ít hay nhiều → tưởng lúc nào cũng đầy. Fix: tạm set `height/maxHeight: auto/none` + `paddingTop: 0` ngay trước khi đo, đo xong restore lại — đúng kỹ thuật autosize-textarea chuẩn.
@@ -54,6 +54,10 @@ Mindmap 1 trang, tối ưu cho tiếng Việt (wrap không cắt giữa từ), c
 **Verify đã làm** (không có browser-automation tool sẵn trong môi trường → tự cài Playwright vào scratchpad, không đụng project): tạo mindmap thật, gõ text dài (EN + VN), Ctrl+Enter 2 lần rồi thử lần 3 (phải bị chặn vì child max 3 dòng = tối đa 2 lần ngắt), paste đoạn dài (phải tự trim theo chiều cao), root gõ tràn (phải dừng ở 2 dòng) — tất cả đúng, 0 lỗi console. `tsc --noEmit` / `next build` / `eslint` đều sạch (lint giữ nguyên baseline lỗi có sẵn từ trước khi đụng vào, không phát sinh thêm).
 
 **Nếu cần sửa tiếp text/wrap sau này:** đọc `CLAUDE.md` §5 mục "Text in boxes" trước (đã cập nhật khớp code), đừng quay lại kiểu đếm ký tự.
+
+### 2b. Revert cùng ngày: child left-align → center lại
+
+User dùng thử xong không thích left-align child ("tao ko thích căn trái child nữa, căn giữa đi") → đổi `textAlign` của child từ `"left"` về `"center"` (2 chỗ trong `MindNodeBox.tsx`: style edit + style hiển thị). Mọi phần còn lại của đại tu mục 2 (bỏ giới hạn ký tự, chặn theo chiều cao thật, root 2/child 3 dòng, `break-spaces`) **giữ nguyên, không đổi**. Đây là bài học nhỏ: **left-align đã bị thử và bác bỏ** — đừng đề xuất lại trừ khi user chủ động yêu cầu.
 
 ---
 

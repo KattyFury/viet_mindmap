@@ -19,7 +19,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Layout: **không chồng lấn** — `reflowAll` theo **chiều cao subtree**; sibling gap `SIBLING_EDGE_GAP=36`, sàn 24.
 - **Tab** = child của node đang chọn (cùng hướng), **không** sibling từ mother.
 - **Delete** = xóa child + subtree **cả khi đang type**; root không xóa.
-- Text: KHÔNG giới hạn ký tự/dòng — chỉ giới hạn số dòng (root 2, child 3); root center, child left; chặn gõ khi đo chiều cao thật (scrollHeight) vượt giới hạn, không đếm ký tự; wrap theo từ; Enter = xong; Ctrl+Enter = xuống dòng.
+- Text: KHÔNG giới hạn ký tự/dòng — chỉ giới hạn số dòng (root 2, child 3); cả root và child đều căn giữa; chặn gõ khi đo chiều cao thật (scrollHeight) vượt giới hạn, không đếm ký tự; wrap theo từ; Enter = xong; Ctrl+Enter = xuống dòng.
 - Line thẳng, dưới box, dig vào mép; ẩn line khi kéo child.
 
 ## File chính

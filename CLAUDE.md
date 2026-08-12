@@ -80,7 +80,7 @@ These were decided after repeated user corrections. **Do not change without expl
 - Wrap là việc của **CSS** (`whiteSpace: break-spaces`, `wordBreak: keep-all`, `overflowWrap: break-word`) theo width thật của box — KHÔNG tự chèn `\n` theo char-count nữa.
 - "Đầy" = đo **chiều cao thật** của textarea (`scrollHeight`, tạm bỏ height/maxHeight/paddingTop để đo đúng nội dung) so với `maxLines * linePx`. Tràn → **chặn gõ** (revert DOM trước khi paint), không truncate theo số ký tự.
 - Dùng `break-spaces` (không phải `pre-wrap`) — nếu không, space cuối dòng bị CSS coi là "hanging" (không tính vào scrollHeight) → gõ space liên tục lúc box đầy vẫn lọt qua vô hạn.
-- Text align: **Root = center**, **Child = left**.
+- Text align: **cả Root và Child đều center** (đã thử left cho child 2026-08-12, user đổi ý lại center cùng ngày — đừng tự ý đổi lại left).
 - Wrap **chỉ tại khoảng trắng** — never split a word mid-way (`chó` không thành `c` + `hó`); hard-cut mid-word chỉ khi 1 từ dài hơn cả 1 dòng (qua `overflowWrap: break-word`).
 - Ctrl+Enter (ngắt dòng thủ công) cho phép tới `maxLines - 1` lần; `capExplicitBreaks()` chỉ cap SỐ newline tường minh (an toàn cho data cũ), không còn xử lý char-wrap.
 - IME (Vietnamese): don’t clamp mid-composition.
