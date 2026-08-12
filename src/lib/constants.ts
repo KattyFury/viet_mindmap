@@ -1,13 +1,8 @@
 import type { BranchColor } from "./types";
 
-export const MAX_LINES = 3;
-
-/** Nhánh: 30 ký tự/hàng · Gốc: 20 ký tự/hàng */
-export const CHILD_CHARS_PER_LINE = 30;
-export const ROOT_CHARS_PER_LINE = 20;
-
-/** @deprecated dùng CHILD_CHARS_PER_LINE */
-export const MAX_CHARS_PER_LINE = CHILD_CHARS_PER_LINE;
+/** Không giới hạn ký tự/dòng nữa — chỉ giới hạn SỐ DÒNG. Wrap theo width thật (CSS). */
+export const ROOT_MAX_LINES = 2;
+export const CHILD_MAX_LINES = 3;
 
 export const FONT_SIZE = 14;
 export const LINE_HEIGHT = 1.35;
@@ -16,12 +11,13 @@ export const ROOT_FONT_SIZE = Math.round(FONT_SIZE * 1.5); // 21
 /** Padding ngang trong box (px) — sát chữ, không dư 2 bên */
 export const BOX_PAD_X = 8;
 
-/** Child: 30 ký tự · Root: 20 ký tự — rộng vừa khít nội dung */
-export const BOX_W = CHILD_CHARS_PER_LINE * 9 + BOX_PAD_X * 2; // ~286
-export const BOX_H = Math.ceil(FONT_SIZE * LINE_HEIGHT * MAX_LINES + 16);
-/** Root: 20 ký tự @ font lớn */
-export const ROOT_BOX_W = ROOT_CHARS_PER_LINE * 11 + BOX_PAD_X * 2; // ~236
-export const ROOT_BOX_H = Math.ceil(ROOT_FONT_SIZE * LINE_HEIGHT * MAX_LINES + 18);
+/** Bề rộng box — cố định px, không còn suy ra từ số ký tự/dòng */
+export const BOX_W = 286;
+export const ROOT_BOX_W = 236;
+export const BOX_H = Math.ceil(FONT_SIZE * LINE_HEIGHT * CHILD_MAX_LINES + 16);
+export const ROOT_BOX_H = Math.ceil(
+  ROOT_FONT_SIZE * LINE_HEIGHT * ROOT_MAX_LINES + 18
+);
 
 /** Horizontal/vertical gap between siblings at level 1 */
 export const BASE_GAP = 120;

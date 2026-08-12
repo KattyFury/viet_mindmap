@@ -3,9 +3,9 @@
 import { create } from "zustand";
 import { pickBranchColor } from "@/lib/colors";
 import {
-  CHILD_CHARS_PER_LINE,
+  CHILD_MAX_LINES,
   MAX_UNDO,
-  ROOT_CHARS_PER_LINE,
+  ROOT_MAX_LINES,
   ROOT_COLOR,
 } from "@/lib/constants";
 import { uid } from "@/lib/id";
@@ -16,7 +16,7 @@ import {
   relocateChild,
 } from "@/lib/layout";
 import { loadState, saveState } from "@/lib/storage";
-import { clampNodeText } from "@/lib/text";
+import { capExplicitBreaks } from "@/lib/text";
 import type { Direction, MindMapDoc, MindNode } from "@/lib/types";
 
 type Snapshot = {
@@ -267,9 +267,9 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
     const map = get().getActiveMap();
     if (!map || !map.nodes[id]) return;
     const isRootNode = id === map.rootId;
-    const safe = clampNodeText(
+    const safe = capExplicitBreaks(
       text,
-      isRootNode ? ROOT_CHARS_PER_LINE : CHILD_CHARS_PER_LINE
+      isRootNode ? ROOT_MAX_LINES : CHILD_MAX_LINES
     );
     const nodes = {
       ...map.nodes,
