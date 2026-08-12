@@ -76,7 +76,7 @@ These were decided after repeated user corrections. **Do not change without expl
 - Lý do: user xem qua web/GitHub Pages; local-only = họ không thấy fix.
 
 ### Text in boxes (`src/lib/text.ts`)
-- Max **2 lines**. Root: **20** chars/line (40 total). Child: **30** chars/line (60 total).
+- Max **3 lines** (`MAX_LINES`). Root: **20** chars/line (60 total). Child: **30** chars/line (90 total).
 - When full → **hard stop typing** (no more insert).
 - Wrap **only at spaces** — never split a word mid-way (`chó` must not become `c` + `hó`).
 - Hard-cut mid-word **only** if a single word is longer than one line.

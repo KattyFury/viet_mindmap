@@ -326,8 +326,8 @@ export function MindNodeBox({
             ref={taRef}
             value={draft}
             rows={MAX_LINES}
-            // +1 cho 1 ký tự \n; chặn gõ khi full
-            maxLength={maxTotal + 1}
+            // +(MAX_LINES-1) cho các ký tự \n; chặn gõ khi full
+            maxLength={maxTotal + (MAX_LINES - 1)}
             spellCheck={false}
             onChange={(e) => applyDraft(e.target.value)}
             onCompositionStart={() => {
@@ -406,11 +406,13 @@ export function MindNodeBox({
               const clipped = paste.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
               let taken = "";
               let n = 0;
+              let breaks = 0;
               for (const ch of clipped) {
                 if (ch === "\n") {
-                  if (taken.includes("\n")) continue;
+                  if (breaks >= MAX_LINES - 1) continue;
                   if (n >= room) break;
                   taken += "\n";
+                  breaks++;
                   continue;
                 }
                 if (n >= room) break;

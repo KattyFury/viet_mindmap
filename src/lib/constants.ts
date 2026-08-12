@@ -1,6 +1,6 @@
 import type { BranchColor } from "./types";
 
-export const MAX_LINES = 2;
+export const MAX_LINES = 3;
 
 /** Nhánh: 30 ký tự/hàng · Gốc: 20 ký tự/hàng */
 export const CHILD_CHARS_PER_LINE = 30;
@@ -18,10 +18,10 @@ export const BOX_PAD_X = 8;
 
 /** Child: 30 ký tự · Root: 20 ký tự — rộng vừa khít nội dung */
 export const BOX_W = CHILD_CHARS_PER_LINE * 9 + BOX_PAD_X * 2; // ~286
-export const BOX_H = Math.ceil(FONT_SIZE * LINE_HEIGHT * 2 + 16);
+export const BOX_H = Math.ceil(FONT_SIZE * LINE_HEIGHT * MAX_LINES + 16);
 /** Root: 20 ký tự @ font lớn */
 export const ROOT_BOX_W = ROOT_CHARS_PER_LINE * 11 + BOX_PAD_X * 2; // ~236
-export const ROOT_BOX_H = Math.ceil(ROOT_FONT_SIZE * LINE_HEIGHT * 2 + 18);
+export const ROOT_BOX_H = Math.ceil(ROOT_FONT_SIZE * LINE_HEIGHT * MAX_LINES + 18);
 
 /** Horizontal/vertical gap between siblings at level 1 */
 export const BASE_GAP = 120;

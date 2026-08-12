@@ -17,7 +17,7 @@ export function isContentFull(text: string, maxPerLine: number): boolean {
 }
 
 /**
- * 2 dòng × maxPerLine.
+ * MAX_LINES dòng × maxPerLine.
  * KHÔNG cắt giữa từ — "chó" không thành "c" + "hó".
  * Chỉ cắt cứng khi 1 từ dài hơn cả 1 dòng.
  */
@@ -28,43 +28,85 @@ export function clampNodeText(
   const limit = maxPerLine;
   const maxTotal = limit * MAX_LINES;
   const s = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const nl = s.indexOf("\n");
 
-  if (nl !== -1) {
-    let line1 = s.slice(0, nl).replace(/\n/g, "");
-    let line2 = s.slice(nl + 1).replace(/\n/g, "");
-
-    if (line1.length > limit) {
-      const br = breakIndex(line1, limit);
-      line2 = line1.slice(br).replace(/^\s+/, "") + line2;
-      line1 = line1.slice(0, br).replace(/\s+$/, "");
-    }
-
-    line1 = line1.slice(0, limit);
-    line2 = line2.slice(0, limit);
-
-    if (line2.length === 0) return `${line1}\n`;
-    return `${line1}\n${line2}`;
+  if (s.includes("\n")) {
+    return clampWithBreaks(s, limit);
   }
 
-  return wrapByWords(s.replace(/\n/g, ""), limit, maxTotal);
+  return wrapByWords(s, limit, maxTotal);
+}
+
+/** Giữ nguyên các dòng do user tự ngắt (Ctrl+Enter), reflow overflow xuống dòng sau. */
+function clampWithBreaks(s: string, limit: number): string {
+  const segments = splitSegments(s, MAX_LINES);
+
+  for (let i = 0; i < segments.length - 1; i++) {
+    if (segments[i].length > limit) {
+      const br = breakIndex(segments[i], limit);
+      const overflow = segments[i].slice(br).replace(/^\s+/, "");
+      segments[i] = segments[i].slice(0, br).replace(/\s+$/, "");
+      segments[i + 1] = overflow + segments[i + 1];
+    }
+  }
+
+  return segments.map((seg) => seg.slice(0, limit)).join("\n");
+}
+
+/** Cắt tại ≤ (maxLines - 1) dấu \n đầu tiên; \n dư ra bị làm phẳng vào dòng cuối. */
+function splitSegments(s: string, maxLines: number): string[] {
+  const breaks: number[] = [];
+  for (let i = 0; i < s.length && breaks.length < maxLines - 1; i++) {
+    if (s[i] === "\n") breaks.push(i);
+  }
+
+  const segments: string[] = [];
+  let start = 0;
+  for (const i of breaks) {
+    segments.push(s.slice(start, i));
+    start = i + 1;
+  }
+  segments.push(s.slice(start).replace(/\n/g, ""));
+  return segments;
 }
 
 function wrapByWords(flat: string, limit: number, maxTotal: number): string {
   const text = flat.slice(0, maxTotal);
-  if (text.length <= limit) return text;
+  const segments: string[] = [];
+  let remaining = text;
 
-  const br = breakIndex(text, limit);
-  let line1 = text.slice(0, br).replace(/\s+$/, "");
-  let line2 = text.slice(br).replace(/^\s+/, "").slice(0, limit);
+  for (let i = 0; i < MAX_LINES; i++) {
+    const isLast = i === MAX_LINES - 1;
 
-  if (line1.length > limit) {
-    line1 = line1.slice(0, limit);
-    line2 = text.slice(limit).replace(/^\s+/, "").slice(0, limit);
+    if (remaining.length <= limit) {
+      segments.push(remaining);
+      remaining = "";
+      break;
+    }
+
+    if (isLast) {
+      segments.push(remaining.slice(0, limit));
+      remaining = "";
+      break;
+    }
+
+    const br = breakIndex(remaining, limit);
+    let line = remaining.slice(0, br).replace(/\s+$/, "");
+    let rest = remaining.slice(br).replace(/^\s+/, "");
+
+    if (line.length > limit) {
+      line = remaining.slice(0, limit);
+      rest = remaining.slice(limit).replace(/^\s+/, "");
+    }
+
+    segments.push(line);
+    remaining = rest;
   }
 
-  if (line2.length === 0) return line1;
-  return `${line1}\n${line2}`;
+  while (segments.length > 1 && segments[segments.length - 1] === "") {
+    segments.pop();
+  }
+
+  return segments.join("\n");
 }
 
 /**
@@ -130,11 +172,13 @@ export function acceptInput(
 }
 
 export function canInsertNewline(text: string): boolean {
-  return !text.includes("\n");
+  const breaks = text.match(/\n/g)?.length ?? 0;
+  return breaks < MAX_LINES - 1;
 }
 
-export function logicalLineCount(text: string): 1 | 2 {
-  return text.includes("\n") ? 2 : 1;
+export function logicalLineCount(text: string): number {
+  const breaks = text.match(/\n/g)?.length ?? 0;
+  return Math.min(breaks + 1, MAX_LINES);
 }
 
 export function charsPerLineForNode(isRoot: boolean): number {
