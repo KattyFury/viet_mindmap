@@ -59,14 +59,13 @@ Mở http://localhost:3000
 ## Tính năng đã chốt (v1)
 
 ### Layout UI
-- Sidebar ~300px · main 4/5
-- Account: chỉ email, căn giữa
-- Thùng rác: “Kéo map vào để xóa”, confirm xóa
-- List map: box trắng viền màu (6 màu), chữ giữa; **Tạo mindmap mới**
+- Sidebar **225px** (3/4 của 300px cũ) · main phần còn lại
+- List map: box trắng viền màu (6 màu), tên + nút **X xóa** (confirm dialog), kéo-thả để reorder; nút **+** cuối list để tạo map mới
+- Không có ô tài khoản/sign-in hay thùng rác kéo-thả trong sidebar (đã bỏ, user chê rối)
 - Mobile: chỉ xem
 
 ### Mindmap core
-- Root đen · child trắng + viền màu
+- Root đen (hoặc màu custom — xem mục Màu) · child trắng + viền màu
 - **Chỉ nhánh trái / phải** (không trên/dưới)
 - [+] 2 hướng (root) / 1 hướng còn lại (child)
 - Line **thẳng**, dưới box, dig vào mép
@@ -91,13 +90,15 @@ Mở http://localhost:3000
 | **Ctrl+Z / Y** | Undo / redo |
 | Cuộn | Zoom |
 
-### Text
-- **Không giới hạn ký tự/dòng** — chỉ giới hạn số dòng: root **2 dòng**, child **3 dòng**
+### Text — box GROW theo nội dung, không có trần
+- **Không giới hạn số dòng lẫn ký tự.** Box chỉ có size mặc định lúc rỗng/ngắn: root **1 dòng** (rộng 200px), child **2 dòng** (rộng 324px) — gõ dài hơn thì box cao ra tự do, bề rộng luôn cố định
 - Root và child đều căn giữa
-- Wrap theo width thật của box (CSS), full → chặn gõ (đo chiều cao thật, không đếm ký tự) · wrap theo **từ** (không cắt giữa “chó”) · IME VN an toàn
+- Wrap theo width thật của box (CSS) · wrap theo **từ** (không cắt giữa “chó”) · IME VN an toàn
+- Box khác không đè lên nhau — mỗi lần gõ xong (Enter/blur) tự đo lại chiều cao rồi xếp lại cả cây
 
-### Màu (6, bỏ chàm)
-Đỏ · Cam · Vàng · Lục · Lam · Tím
+### Màu — 2 chế độ (nút góc trên-phải canvas)
+- **Rainbow** (mặc định): 6 màu luân phiên theo nhánh — Đỏ · Cam · Vàng · Lục · Lam · Tím
+- **Custom color**: đúng 1 màu cho mọi box + line, kể cả nền root. Setting chung toàn app (không theo từng mindmap)
 
 ---
 
@@ -113,13 +114,14 @@ Agent: sửa xong **commit + push ngay** (user dùng web app).
 ```
 src/
   app/           # layout, page, auth API
-  components/    # Sidebar, MindMapCanvas, MindNodeBox, icons
+  components/    # Sidebar, MindMapCanvas, MindNodeBox, ColorModeMenu, icons
   store/         # mindmap-store (Zustand)
-  lib/           # layout, text, colors, export-png, auth, storage
+  lib/           # layout, text, colors, color-settings, export-png, auth, storage
 launch.bat / launch-silent.vbs / scripts/install-desktop-shortcut.ps1
 ```
 
-Data: `localStorage` key `vietmindmap:v1:<userKey>`.
+Data mindmap: `localStorage` key `vietmindmap:v1:<userKey>`.
+Chế độ màu (rainbow/custom): `localStorage` key `vietmindmap:colormode:v1` — chung toàn app, không theo userKey.
 
 ---
 

@@ -1,13 +1,10 @@
 "use client";
 
 import { create } from "zustand";
+import type { ColorMode } from "@/lib/color-settings";
+import { loadColorSettings, saveColorSettings } from "@/lib/color-settings";
 import { pickBranchColor } from "@/lib/colors";
-import {
-  CHILD_MAX_LINES,
-  MAX_UNDO,
-  ROOT_MAX_LINES,
-  ROOT_COLOR,
-} from "@/lib/constants";
+import { MAX_UNDO, ROOT_COLOR, defaultBoxHeight } from "@/lib/constants";
 import { uid } from "@/lib/id";
 import {
   childrenOf,
@@ -16,7 +13,6 @@ import {
   relocateChild,
 } from "@/lib/layout";
 import { loadState, saveState } from "@/lib/storage";
-import { capExplicitBreaks } from "@/lib/text";
 import type { Direction, MindMapDoc, MindNode } from "@/lib/types";
 
 type Snapshot = {
@@ -35,6 +31,12 @@ interface MindmapState {
   future: Snapshot[];
   hydrated: boolean;
 
+  /** Chế độ màu — CHUNG TOÀN APP, không theo từng mindmap. */
+  colorMode: ColorMode;
+  customColor: string;
+  setColorMode: (mode: ColorMode) => void;
+  setCustomColor: (hex: string) => void;
+
   hydrate: (userKey: string) => void;
   setSelected: (id: string | null) => void;
   clearPendingEdit: () => void;
@@ -45,7 +47,8 @@ interface MindmapState {
   deleteMap: (id: string) => void;
 
   addChild: (parentId: string, direction: Direction) => void;
-  updateText: (id: string, text: string) => void;
+  /** h = chiều cao box đo được (world px) — box grow theo nội dung, luôn reflow lại. */
+  updateText: (id: string, text: string, h: number) => void;
   /** Kéo child: đổi bên / reorder, rồi snap reflow */
   relocateChildDrag: (id: string, worldX: number, worldY: number) => void;
   deleteSubtree: (id: string) => void;
@@ -143,6 +146,17 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
   past: [],
   future: [],
   hydrated: false,
+
+  colorMode: loadColorSettings().mode,
+  customColor: loadColorSettings().customColor,
+  setColorMode: (mode) => {
+    set({ colorMode: mode });
+    saveColorSettings({ mode, customColor: get().customColor });
+  },
+  setCustomColor: (hex) => {
+    set({ customColor: hex });
+    saveColorSettings({ mode: get().colorMode, customColor: hex });
+  },
 
   hydrate: (userKey) => {
     const saved = loadState(userKey);
@@ -263,23 +277,20 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
     persist(get);
   },
 
-  updateText: (id, text) => {
+  updateText: (id, text, h) => {
     const map = get().getActiveMap();
     if (!map || !map.nodes[id]) return;
     const isRootNode = id === map.rootId;
-    const safe = capExplicitBreaks(
-      text,
-      isRootNode ? ROOT_MAX_LINES : CHILD_MAX_LINES
+    // Box grow theo nội dung → chiều cao đổi thì subtree khác phải nhường chỗ (reflow).
+    const nodes = reflowAll(
+      { ...map.nodes, [id]: { ...map.nodes[id], text, h } },
+      map.rootId
     );
-    const nodes = {
-      ...map.nodes,
-      [id]: { ...map.nodes[id], text: safe },
-    };
     set({
       maps: updateActiveMap(get().maps, get().activeMapId, (m) => ({
         ...m,
         nodes,
-        name: isRootNode ? safe.trim() : m.name,
+        name: isRootNode ? text.trim() : m.name,
         updatedAt: Date.now(),
       })),
     });
@@ -328,7 +339,8 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
     const map = get().getActiveMap();
     if (!map || !map.nodes[id]) return;
     pushHistory(set, get);
-    get().updateText(id, "");
+    const isRootNode = id === map.rootId;
+    get().updateText(id, "", defaultBoxHeight(isRootNode));
   },
 
   undo: () => {

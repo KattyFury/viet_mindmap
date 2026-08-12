@@ -48,6 +48,15 @@ export function IconPlus(props: IconProps) {
   );
 }
 
+/** X — close / delete */
+export function IconClose(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
 /** Download arrow into tray */
 export function IconDownload(props: IconProps) {
   return (

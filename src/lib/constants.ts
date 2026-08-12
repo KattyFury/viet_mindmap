@@ -1,23 +1,31 @@
 import type { BranchColor } from "./types";
 
-/** Không giới hạn ký tự/dòng nữa — chỉ giới hạn SỐ DÒNG. Wrap theo width thật (CSS). */
-export const ROOT_MAX_LINES = 2;
-export const CHILD_MAX_LINES = 3;
+/**
+ * KHÔNG giới hạn số dòng/ký tự — box GROW theo nội dung, tùy ý bao nhiêu dòng.
+ * *_DEFAULT_LINES chỉ là kích thước lúc box rỗng/ngắn (chưa cần grow).
+ */
+export const ROOT_DEFAULT_LINES = 1;
+export const CHILD_DEFAULT_LINES = 2;
 
 export const FONT_SIZE = 14;
 export const LINE_HEIGHT = 1.35;
-export const ROOT_FONT_SIZE = Math.round(FONT_SIZE * 1.5); // 21
+export const ROOT_FONT_SIZE = Math.round(FONT_SIZE * 1.2); // 17 — trước 1.5x (21) nhìn quá to
 
 /** Padding ngang trong box (px) — sát chữ, không dư 2 bên */
 export const BOX_PAD_X = 8;
+/** Padding dọc trong box (px, top+bottom cộng lại) */
+export const BOX_PAD_Y = 16;
 
-/** Bề rộng box — cố định px, không còn suy ra từ số ký tự/dòng */
-export const BOX_W = 286;
-export const ROOT_BOX_W = 236;
-export const BOX_H = Math.ceil(FONT_SIZE * LINE_HEIGHT * CHILD_MAX_LINES + 16);
-export const ROOT_BOX_H = Math.ceil(
-  ROOT_FONT_SIZE * LINE_HEIGHT * ROOT_MAX_LINES + 18
-);
+/** Bề rộng box — CỐ ĐỊNH, chỉ chiều CAO mới grow theo nội dung */
+export const BOX_W = 324;
+export const ROOT_BOX_W = 200;
+
+/** Chiều cao box lúc rỗng/ngắn (world px) — grow thêm khi nội dung dài hơn. */
+export function defaultBoxHeight(isRoot: boolean): number {
+  const font = isRoot ? ROOT_FONT_SIZE : FONT_SIZE;
+  const lines = isRoot ? ROOT_DEFAULT_LINES : CHILD_DEFAULT_LINES;
+  return Math.ceil(font * LINE_HEIGHT * lines + BOX_PAD_Y);
+}
 
 /** Horizontal/vertical gap between siblings at level 1 */
 export const BASE_GAP = 120;
@@ -37,7 +45,7 @@ export const BRANCH_COLORS: BranchColor[] = [
 
 export const ROOT_COLOR = "#111111" as const;
 
-export const SIDEBAR_W = 300;
+export const SIDEBAR_W = 225; // 3/4 của 300 cũ
 
 export const MAX_UNDO = 10;
 

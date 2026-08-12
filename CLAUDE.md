@@ -75,16 +75,35 @@ These were decided after repeated user corrections. **Do not change without expl
 - Không hỏi “có push không?” — mặc định **luôn push** sau khi xong task (trừ khi user bảo giữ local).
 - Lý do: user xem qua web/GitHub Pages; local-only = họ không thấy fix.
 
-### Text in boxes (`src/lib/text.ts`, `MindNodeBox.tsx`)
-- **KHÔNG giới hạn ký tự/dòng.** Chỉ giới hạn **số dòng**: Root `ROOT_MAX_LINES` = **2**, Child `CHILD_MAX_LINES` = **3**.
-- Wrap là việc của **CSS** (`whiteSpace: break-spaces`, `wordBreak: keep-all`, `overflowWrap: break-word`) theo width thật của box — KHÔNG tự chèn `\n` theo char-count nữa.
-- "Đầy" = đo **chiều cao thật** của textarea (`scrollHeight`, tạm bỏ height/maxHeight/paddingTop để đo đúng nội dung) so với `maxLines * linePx`. Tràn → **chặn gõ** (revert DOM trước khi paint), không truncate theo số ký tự.
-- Dùng `break-spaces` (không phải `pre-wrap`) — nếu không, space cuối dòng bị CSS coi là "hanging" (không tính vào scrollHeight) → gõ space liên tục lúc box đầy vẫn lọt qua vô hạn.
+### Box size — GROW theo nội dung, không còn max (đại tu 2026-08-12, xem `HANDOFF.md` mục 2+3)
+- **KHÔNG giới hạn số dòng lẫn ký tự.** Box chỉ có kích thước MẶC ĐỊNH lúc rỗng/ngắn (`defaultBoxHeight()` trong `constants.ts`), gõ dài hơn thì box **cao ra tự do**, không trần.
+  - Root: rộng cố định **200px**, mặc định **1 dòng** (`ROOT_DEFAULT_LINES`).
+  - Child: rộng cố định **324px**, mặc định **2 dòng** (`CHILD_DEFAULT_LINES`).
+  - Bề rộng LUÔN cố định theo loại node — chỉ chiều cao grow.
+- **Không đè nhau (LOCKED, mở rộng từ rule cũ):** vì box cao động, mỗi lần `updateText` (commit — blur/Enter) đo chiều cao thật rồi `reflowAll` lại toàn cây — nhánh khác tự nhường chỗ theo chiều cao mới. Trong lúc đang gõ (chưa commit), box tự nó lớn lên live (không reflow cây, chỉ node đang edit — chấp nhận đè tạm lúc edit, ổn định lại khi commit).
+- Đo chiều cao = đo DOM thật (`scrollHeight`), KHÔNG suy ra từ số ký tự — vì `scrollHeight` bị "sàn" ở height/padding hiện tại của element (không bao giờ báo NHỎ hơn), nên đo xong phải **tạm bỏ height + padding** (set `auto`/`0`) rồi mới đọc, để box CO LẠI được khi xóa chữ. Xem `measureAndApplyTextareaBox()` trong `MindNodeBox.tsx`.
+- `<textarea>` PHẢI có `rows={1}` tường minh — thiếu `rows` thì browser mặc định cao tối thiểu 2 dòng, làm sai phép đo cho root (mặc định chỉ 1 dòng) → caret bị đẩy lệch lên trên thay vì canh giữa.
+- Canh giữa dọc: vì box có thể cao hơn nội dung thật (đang ở mức sàn default), phần dư phải **chia đều top/bottom**, không dồn hết lên trên/dưới — đây chính là bug đã gặp (caret lệch lên) và đã sửa 2026-08-12.
+- Wrap là việc của **CSS** (`whiteSpace: break-spaces`, `wordBreak: keep-all`, `overflowWrap: break-word`) theo width thật của box — KHÔNG tự chèn `\n` theo char-count.
+- Dùng `break-spaces` (không phải `pre-wrap`) — nếu không, space cuối dòng bị CSS coi là "hanging" (không tính vào scrollHeight) → đo chiều cao sẽ sai/lọt.
 - Text align: **cả Root và Child đều center** (đã thử left cho child 2026-08-12, user đổi ý lại center cùng ngày — đừng tự ý đổi lại left).
 - Wrap **chỉ tại khoảng trắng** — never split a word mid-way (`chó` không thành `c` + `hó`); hard-cut mid-word chỉ khi 1 từ dài hơn cả 1 dòng (qua `overflowWrap: break-word`).
-- Ctrl+Enter (ngắt dòng thủ công) cho phép tới `maxLines - 1` lần; `capExplicitBreaks()` chỉ cap SỐ newline tường minh (an toàn cho data cũ), không còn xử lý char-wrap.
-- IME (Vietnamese): don’t clamp mid-composition.
+- Ctrl+Enter (ngắt dòng thủ công): **không giới hạn số lần** — box grow theo nếu cần.
+- IME (Vietnamese): don’t clamp mid-composition (không còn giới hạn nào để clamp nữa, nhưng vẫn giữ nguyên tắc không xáo giữa chừng composition).
 - **Enter** = xong type (commit). **Ctrl+Enter** (Cmd+Enter) = xuống dòng.
+- `src/lib/text.ts` giờ chỉ còn `capExplicitBreaks`/`canInsertNewline`/`estimateLineCount` cho an toàn data cũ — KHÔNG còn xử lý char-wrap gì cả.
+
+### Màu (2 chế độ — thêm 2026-08-12)
+- **Rainbow (mặc định):** mỗi nhánh 1 màu trong `BRANCH_COLORS` (6 màu, đã bỏ chàm từ trước — **đừng thêm lại thành 7**, user xác nhận giữ 6 khi được hỏi).
+- **Custom color:** đúng 1 màu cho MỌI box (viền), MỌI line, và **cả nền root** (root không còn luôn luôn đen ở chế độ này). Chữ trong root tự đổi đen/trắng theo độ sáng màu (`contrastText()` trong `colors.ts`) — không hardcode trắng.
+- Setting này **CHUNG TOÀN APP** (không theo từng mindmap), lưu ở `localStorage` key riêng (`color-settings.ts`), KHÔNG nằm trong `MindMapDoc`.
+- UI: nút "Rainbow"/"Màu riêng" góc trên-phải canvas (`ColorModeMenu.tsx`), cạnh Center/Download.
+
+### Sidebar (tối giản 2026-08-12)
+- **Không còn** ô tài khoản (email/sign-in), ô "Kéo map vào để xóa", nhãn "Các mindmap" — user chê rối, yêu cầu xóa hết.
+- Mỗi mindmap trong list = tên + nút X (bấm ra `ConfirmDialog`, không cần kéo-thả vào thùng rác nữa). Nút "+" (icon, không chữ) ở cuối list để tạo map mới.
+- `SIDEBAR_W = 225` (3/4 của 300px cũ) — user yêu cầu bớt rộng.
+- Kéo-thả để REORDER map trong list vẫn giữ nguyên (chỉ đổi cách XÓA, không đụng reorder).
 
 ### Lines (`src/lib/layout.ts` → `lineEndpoints`)
 - Lines render **under** boxes; both ends dig **into** the box.

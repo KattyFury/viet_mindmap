@@ -8,27 +8,22 @@ import {
   type CSSProperties,
 } from "react";
 import {
-  BOX_H,
   BOX_PAD_X,
+  BOX_PAD_Y,
   BOX_RADIUS,
   BOX_W,
-  CHILD_MAX_LINES,
   FONT_SIZE,
   LINE_HEIGHT,
-  ROOT_BOX_H,
   ROOT_BOX_W,
   ROOT_COLOR,
   ROOT_FONT_SIZE,
-  ROOT_MAX_LINES,
   STROKE_WIDTH,
   STROKE_WIDTH_SELECTED,
+  defaultBoxHeight,
 } from "@/lib/constants";
+import { contrastText } from "@/lib/colors";
 import { opposite } from "@/lib/layout";
-import {
-  canInsertNewline,
-  capExplicitBreaks,
-  estimateLineCount,
-} from "@/lib/text";
+import { useMindmapStore } from "@/store/mindmap-store";
 import type { Direction, MindNode } from "@/lib/types";
 import { IconPlus } from "./icons";
 
@@ -40,7 +35,8 @@ interface MindNodeBoxProps {
   scale: number;
   onSelect: () => void;
   onAdd: (dir: Direction) => void;
-  onTextChange: (text: string) => void;
+  /** h = chiều cao box đo được (world px) — box grow theo nội dung */
+  onTextChange: (text: string, h: number) => void;
   onAutoEditConsumed: () => void;
   /** Tab khi đang edit → lưu chữ + tạo child của node này (cùng hướng nhánh) */
   onTabCreateSibling: () => void;
@@ -56,25 +52,31 @@ interface MindNodeBoxProps {
 const DIRS: Direction[] = ["left", "right"];
 
 /**
- * Đo số dòng thực tế của textarea tại value hiện có.
- * scrollHeight bị sàn bởi height/maxHeight cố định của box (luôn ≥ clientHeight),
- * nên phải tạm bỏ height/maxHeight/paddingTop để lấy đúng chiều cao nội dung.
+ * Đo chiều cao NỘI DUNG THẬT (không tính padding, world px) của textarea đang
+ * edit, rồi set lại height + padding-top/bottom để canh giữa dọc.
+ * scrollHeight bị "sàn" ở height/padding hiện tại của element (không bao giờ
+ * báo NHỎ hơn) — nên phải tạm bỏ height + padding trước khi đo.
+ *
+ * Box luôn ≥ floorWorldH (default lines) → khi nội dung NGẮN hơn default
+ * (rỗng, 1 dòng trong box mặc định 2 dòng…) sẽ dư khoảng trống — dư đó phải
+ * chia đều top/bottom để caret/chữ nằm GIỮA box, không dồn hết lên trên.
  */
-function measureLinesAtCurrentValue(
+function measureAndApplyTextareaBox(
   el: HTMLTextAreaElement,
-  linePx: number
-): number {
-  const prevPad = el.style.paddingTop;
-  const prevHeight = el.style.height;
-  const prevMaxHeight = el.style.maxHeight;
+  scale: number,
+  floorWorldH: number,
+  padWorldTotal: number
+): { worldH: number; padWorld: number } {
   el.style.paddingTop = "0px";
+  el.style.paddingBottom = "0px";
   el.style.height = "auto";
-  el.style.maxHeight = "none";
-  const lines = Math.max(1, Math.round(el.scrollHeight / linePx));
-  el.style.paddingTop = prevPad;
-  el.style.height = prevHeight;
-  el.style.maxHeight = prevMaxHeight;
-  return lines;
+  const contentWorldH = el.scrollHeight / scale;
+  const worldH = Math.max(floorWorldH, contentWorldH + padWorldTotal);
+  const padWorld = (worldH - contentWorldH) / 2;
+  el.style.paddingTop = `${padWorld * scale}px`;
+  el.style.paddingBottom = `${padWorld * scale}px`;
+  el.style.height = `${worldH * scale}px`;
+  return { worldH, padWorld };
 }
 
 export function MindNodeBox({
@@ -94,25 +96,24 @@ export function MindNodeBox({
   const isRoot = node.parentId === null;
   const s = scale;
   const w = (isRoot ? ROOT_BOX_W : BOX_W) * s;
-  const h = (isRoot ? ROOT_BOX_H : BOX_H) * s;
   const fontSize = (isRoot ? ROOT_FONT_SIZE : FONT_SIZE) * s;
   const padX = BOX_PAD_X * s;
-  const maxLines = isRoot ? ROOT_MAX_LINES : CHILD_MAX_LINES;
-  const linePx = fontSize * LINE_HEIGHT;
-  const textBlockH = linePx * maxLines;
-  const clamp = (t: string) => capExplicitBreaks(t, maxLines);
+  const padY = (BOX_PAD_Y / 2) * s;
+  const defaultH = defaultBoxHeight(isRoot);
+  /** Box grow theo nội dung, không giới hạn số dòng. */
+  const committedH = node.h ?? defaultH;
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(node.text);
-  const [visualLines, setVisualLines] = useState(() =>
-    estimateLineCount(node.text, maxLines)
-  );
+  const [liveH, setLiveH] = useState(committedH);
+  /** Padding dọc THẬT của textarea đang edit — canh giữa khi nội dung ngắn hơn default. */
+  const [taPadY, setTaPadY] = useState(BOX_PAD_Y / 2);
   const [dragPreview, setDragPreview] = useState<{
     x: number;
     y: number;
   } | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
-  const composingRef = useRef(false);
+  const spanRef = useRef<HTMLSpanElement>(null);
   const dragRef = useRef<{
     startClientX: number;
     startClientY: number;
@@ -122,9 +123,8 @@ export function MindNodeBox({
   } | null>(null);
 
   useEffect(() => {
-    if (!editing) setDraft(clamp(node.text));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [node.text, editing, maxLines]);
+    if (!editing) setDraft(node.text);
+  }, [node.text, editing]);
 
   useEffect(() => {
     if (editing) {
@@ -139,22 +139,51 @@ export function MindNodeBox({
     }
   }, [autoEdit, onAutoEditConsumed]);
 
-  /** Đo lại số dòng thực (theo width thật) mỗi khi draft/zoom đổi — chỉnh padding để canh giữa dọc khi edit. */
+  /** Đang edit: đo lại chiều cao thật (theo width thật, browser tự wrap) mỗi khi draft/zoom đổi → box grow/co live, canh giữa dọc. */
   useLayoutEffect(() => {
     if (!editing) return;
     const el = taRef.current;
     if (!el) return;
-    setVisualLines(measureLinesAtCurrentValue(el, linePx));
-  }, [editing, draft, linePx, maxLines]);
+    const { worldH, padWorld } = measureAndApplyTextareaBox(
+      el,
+      s,
+      defaultH,
+      BOX_PAD_Y
+    );
+    setLiveH(worldH);
+    setTaPadY(padWorld);
+  }, [editing, draft, s, defaultH]);
+
+  /**
+   * Không edit: tự chữa dữ liệu cũ/lệch (map cũ trước khi có field `h`, hoặc
+   * font/host khác làm lệch vài px) — đo span thật, khác node.h thì ghi lại.
+   */
+  useLayoutEffect(() => {
+    if (editing) return;
+    if (!node.text) return;
+    const span = spanRef.current;
+    if (!span) return;
+    const worldH = Math.max(defaultH, span.offsetHeight / s + BOX_PAD_Y);
+    if (Math.abs(worldH - committedH) > 1) {
+      onTextChange(node.text, worldH);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, node.text, s, defaultH, committedH]);
 
   const hidden: Direction | null = node.direction
     ? opposite(node.direction)
     : null;
   const plusDirs = isRoot ? DIRS : DIRS.filter((d) => d !== hidden);
 
-  const bg = isRoot ? ROOT_COLOR : "#FFFFFF";
-  const fg = isRoot ? "#FFFFFF" : "#000000";
-  const border = isRoot ? ROOT_COLOR : (node.color as string);
+  const colorMode = useMindmapStore((st) => st.colorMode);
+  const customColor = useMindmapStore((st) => st.customColor);
+  const custom = colorMode === "custom";
+  // Root: bg+border luôn 1 màu (đen mặc định, hoặc customColor ở chế độ custom).
+  // Child: bg luôn trắng; border = màu nhánh riêng, hoặc customColor ở chế độ custom.
+  const rootColor = custom ? customColor : ROOT_COLOR;
+  const bg = isRoot ? rootColor : "#FFFFFF";
+  const fg = isRoot ? contrastText(rootColor) : "#000000";
+  const border = isRoot ? rootColor : custom ? customColor : (node.color as string);
   const plusSize = (isRoot ? 26 : 22) * s;
 
   function plusStyle(dir: Direction): CSSProperties {
@@ -168,8 +197,8 @@ export function MindNodeBox({
       justifyContent: "center",
       borderRadius: 999,
       background: "#fff",
-      border: `${1.5 * s}px solid ${isRoot ? "#333" : border}`,
-      color: isRoot ? "#111" : border,
+      border: `${1.5 * s}px solid ${border}`,
+      color: border,
       cursor: "pointer",
       zIndex: 5,
       boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
@@ -208,27 +237,10 @@ export function MindNodeBox({
 
   function commit(text: string) {
     setEditing(false);
-    onTextChange(clamp(text));
+    onTextChange(text, liveH);
   }
 
-  /** Gõ bình thường (không compose): browser đã tự wrap theo width — chỉ cần chặn khi tràn quá maxLines. */
-  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const el = e.currentTarget;
-    if (composingRef.current) {
-      setDraft(el.value);
-      return;
-    }
-    const next = el.value;
-    const lines = measureLinesAtCurrentValue(el, linePx);
-    if (lines > maxLines) {
-      el.value = draft; // revert DOM trước khi paint — không cho gõ thêm khi box đã đầy
-      return;
-    }
-    setDraft(next);
-  }
-
-  const lines = visualLines;
-  const padY = Math.max(0, (h - lines * linePx) / 2);
+  const h = (editing ? liveH : committedH) * s;
   /** Viền scale theo zoom, sàn 1px khi zoom nhỏ */
   const borderW = Math.max(
     (selected ? STROKE_WIDTH_SELECTED : STROKE_WIDTH) * s,
@@ -249,7 +261,7 @@ export function MindNodeBox({
     lineHeight: LINE_HEIGHT,
     textAlign: "center",
     // break-spaces (không phải pre-wrap): space cuối dòng KHÔNG được "hang" ra
-    // ngoài box — nếu không, gõ space liên tục lúc box đầy vẫn lọt qua vô hạn.
+    // ngoài box — nếu không, đo chiều cao thật sẽ bị lệch.
     whiteSpace: "break-spaces",
     wordBreak: "keep-all",
     overflowWrap: "break-word",
@@ -271,7 +283,7 @@ export function MindNodeBox({
    */
   const faceShadow = [
     `inset 0 0 0 ${borderW}px ${border}`,
-    selected ? `0 0 0 ${2 * s}px ${isRoot ? "#111" : border}33` : "",
+    selected ? `0 0 0 ${2 * s}px ${border}33` : "",
   ]
     .filter(Boolean)
     .join(", ");
@@ -359,32 +371,15 @@ export function MindNodeBox({
           <textarea
             ref={taRef}
             value={draft}
-            rows={maxLines}
+            rows={1}
             spellCheck={false}
-            onChange={handleChange}
-            onCompositionStart={() => {
-              composingRef.current = true;
-            }}
-            onCompositionEnd={(e) => {
-              composingRef.current = false;
-              const el = e.currentTarget;
-              let next = el.value;
-              el.value = next;
-              let lines2 = measureLinesAtCurrentValue(el, linePx);
-              // IME xong mới clamp theo chiều cao thật — không xáo giữa chừng
-              while (lines2 > maxLines && next.length > 0) {
-                next = next.slice(0, -1);
-                el.value = next;
-                lines2 = measureLinesAtCurrentValue(el, linePx);
-              }
-              setDraft(next);
-            }}
+            onChange={(e) => setDraft(e.target.value)}
             onBlur={() => commit(draft)}
             onKeyDown={(e) => {
               if (e.key === "Tab") {
                 e.preventDefault();
                 e.stopPropagation();
-                onTextChange(clamp(draft));
+                onTextChange(draft, liveH);
                 setEditing(false);
                 onTabCreateSibling();
                 return;
@@ -401,19 +396,9 @@ export function MindNodeBox({
                 e.preventDefault();
                 // Ctrl/Cmd+Enter = xuống dòng; Enter = xong type
                 if (e.ctrlKey || e.metaKey) {
-                  if (canInsertNewline(draft, maxLines)) {
-                    const el = taRef.current;
-                    if (el) {
-                      const pos = el.selectionStart ?? draft.length;
-                      const next =
-                        draft.slice(0, pos) + "\n" + draft.slice(pos);
-                      const prevVal = el.value;
-                      el.value = next;
-                      const nl = measureLinesAtCurrentValue(el, linePx);
-                      el.value = prevVal;
-                      if (nl <= maxLines) setDraft(next);
-                    }
-                  }
+                  const el = taRef.current;
+                  const pos = el?.selectionStart ?? draft.length;
+                  setDraft(draft.slice(0, pos) + "\n" + draft.slice(pos));
                   return;
                 }
                 commit(draft);
@@ -421,67 +406,19 @@ export function MindNodeBox({
               }
               if (e.key === "Escape") {
                 setEditing(false);
-                setDraft(clamp(node.text));
+                setDraft(node.text);
                 e.stopPropagation();
                 return;
               }
               e.stopPropagation();
-            }}
-            onPaste={(e) => {
-              e.preventDefault();
-              if (composingRef.current) return;
-              const el = taRef.current;
-              if (!el) return;
-              const paste = e.clipboardData
-                .getData("text")
-                .replace(/\r\n/g, "\n")
-                .replace(/\r/g, "\n");
-              const start = el.selectionStart ?? draft.length;
-              const end = el.selectionEnd ?? draft.length;
-
-              const outsideSelection =
-                draft.slice(0, start) + draft.slice(end);
-              const existingBreaks =
-                outsideSelection.match(/\n/g)?.length ?? 0;
-              const breakBudget = Math.max(
-                0,
-                maxLines - 1 - existingBreaks
-              );
-              let breaksUsed = 0;
-              let clipped = "";
-              for (const ch of paste) {
-                if (ch === "\n") {
-                  if (breaksUsed >= breakBudget) continue;
-                  clipped += "\n";
-                  breaksUsed++;
-                  continue;
-                }
-                clipped += ch;
-              }
-
-              let candidate = draft.slice(0, start) + clipped + draft.slice(end);
-              const prevVal = el.value;
-              el.value = candidate;
-              let lines3 = measureLinesAtCurrentValue(el, linePx);
-              // Tràn theo chiều cao (không theo ký tự) → cắt dần từ cuối đoạn dán
-              while (lines3 > maxLines && clipped.length > 0) {
-                clipped = clipped.slice(0, -1);
-                candidate = draft.slice(0, start) + clipped + draft.slice(end);
-                el.value = candidate;
-                lines3 = measureLinesAtCurrentValue(el, linePx);
-              }
-              el.value = prevVal;
-              setDraft(candidate);
             }}
             className="box-border w-full resize-none overflow-hidden bg-transparent outline-none"
             style={{
               ...textStyle,
               paddingLeft: padX,
               paddingRight: padX,
-              paddingTop: padY,
-              paddingBottom: 0,
-              height: h,
-              maxHeight: h,
+              paddingTop: taPadY * s,
+              paddingBottom: taPadY * s,
               overflowX: "hidden",
               overflowY: "hidden",
             }}
@@ -493,14 +430,16 @@ export function MindNodeBox({
               ...textStyle,
               paddingLeft: padX,
               paddingRight: padX,
+              paddingTop: padY,
+              paddingBottom: padY,
             }}
           >
             {node.text ? (
               <span
-                className="block w-full overflow-hidden"
+                ref={spanRef}
+                className="block w-full"
                 style={{
                   whiteSpace: "break-spaces",
-                  maxHeight: textBlockH,
                   lineHeight: LINE_HEIGHT,
                   fontSize,
                   fontWeight: 600,
@@ -509,7 +448,7 @@ export function MindNodeBox({
                   textAlign: "center",
                 }}
               >
-                {clamp(node.text)}
+                {node.text}
               </span>
             ) : null}
           </div>

@@ -1,10 +1,9 @@
 import {
   BASE_GAP,
-  BOX_H,
   BOX_W,
   GAP_DECAY,
-  ROOT_BOX_H,
   ROOT_BOX_W,
+  defaultBoxHeight,
 } from "./constants";
 import type { Direction, MindNode } from "./types";
 
@@ -24,15 +23,20 @@ export function isRootNode(node: MindNode): boolean {
   return node.parentId === null || node.level === 0;
 }
 
+/** Box GROW theo nội dung — w cố định theo loại node, h lấy từ node.h đo được (fallback default). */
 export function nodeBoxSize(node: MindNode): { w: number; h: number } {
-  if (isRootNode(node)) return { w: ROOT_BOX_W, h: ROOT_BOX_H };
-  return { w: BOX_W, h: BOX_H };
+  const root = isRootNode(node);
+  return {
+    w: root ? ROOT_BOX_W : BOX_W,
+    h: node.h ?? defaultBoxHeight(root),
+  };
 }
 
 /**
  * Khoảng cách TÂM–TÂM giữa siblings cùng hướng (leaf, không tính subtree).
  * - Trên/dưới: xếp ngang → phải ≥ BOX_W + hở (trước dùng BASE_GAP=120 < BOX_W → chồng box)
- * - Trái/phải: xếp dọc → ≥ BOX_H + hở
+ * - Trái/phải: xếp dọc → ≥ defaultBoxHeight + hở (hàm này không dùng height thật per-node,
+ *   chỉ 1 ước lượng chung — spacing thật giữa sibling nằm ở reflowSiblings/subtreeBounds).
  */
 export function siblingCenterGap(
   direction: Direction,
@@ -42,7 +46,7 @@ export function siblingCenterGap(
   if (direction === "up" || direction === "down") {
     return (BOX_W + SIBLING_EDGE_GAP) * decay;
   }
-  return (BOX_H + SIBLING_EDGE_GAP) * decay;
+  return (defaultBoxHeight(false) + SIBLING_EDGE_GAP) * decay;
 }
 
 /** @deprecated dùng siblingCenterGap */
@@ -63,7 +67,7 @@ export function branchOffset(
   level: number
 ) {
   const p = nodeBoxSize(parent);
-  const c = { w: BOX_W, h: BOX_H };
+  const c = { w: BOX_W, h: defaultBoxHeight(false) };
   const decay = Math.pow(GAP_DECAY, Math.max(0, level - 1));
   const gapH = EDGE_GAP * decay;
   const gapV = EDGE_GAP_VERTICAL * decay;
@@ -437,14 +441,8 @@ export function boundsOfNodes(nodes: MindNode[]): {
   height: number;
 } {
   if (nodes.length === 0) {
-    return {
-      minX: 0,
-      minY: 0,
-      maxX: BOX_W,
-      maxY: BOX_H,
-      width: BOX_W,
-      height: BOX_H,
-    };
+    const h = defaultBoxHeight(false);
+    return { minX: 0, minY: 0, maxX: BOX_W, maxY: h, width: BOX_W, height: h };
   }
   let minX = Infinity;
   let minY = Infinity;

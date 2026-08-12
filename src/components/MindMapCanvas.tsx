@@ -6,6 +6,7 @@ import { exportMindmapPng } from "@/lib/export-png";
 import { lineEndpoints } from "@/lib/layout";
 import { useMindmapStore } from "@/store/mindmap-store";
 import type { Direction, MindMapDoc } from "@/lib/types";
+import { ColorModeMenu } from "./ColorModeMenu";
 import { IconDownload } from "./icons";
 import { MindNodeBox } from "./MindNodeBox";
 
@@ -37,6 +38,8 @@ export function MindMapCanvas() {
   const clearText = useMindmapStore((s) => s.clearText);
   const undo = useMindmapStore((s) => s.undo);
   const redo = useMindmapStore((s) => s.redo);
+  const colorMode = useMindmapStore((s) => s.colorMode);
+  const customColor = useMindmapStore((s) => s.customColor);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
@@ -199,7 +202,8 @@ export function MindMapCanvas() {
       .map((n) => {
         const parent = map.nodes[n.parentId!];
         const ep = lineEndpoints(parent, n, scale, map.nodes);
-        return { id: n.id, color: n.color, ...ep };
+        const color = colorMode === "custom" ? customColor : n.color;
+        return { id: n.id, color, ...ep };
       });
 
   async function handleDownload() {
@@ -239,6 +243,7 @@ export function MindMapCanvas() {
   return (
     <div className="relative h-full min-w-0 flex-1 bg-white">
       <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+        <ColorModeMenu />
         <button
           type="button"
           onClick={recenter}
@@ -359,7 +364,7 @@ export function MindMapCanvas() {
                 autoEdit={pendingEditId === node.id}
                 onSelect={() => setSelected(node.id)}
                 onAdd={(dir: Direction) => addChild(node.id, dir)}
-                onTextChange={(text) => updateText(node.id, text)}
+                onTextChange={(text, h) => updateText(node.id, text, h)}
                 onAutoEditConsumed={clearPendingEdit}
                 onTabCreateSibling={addChildOfSelected}
                 onDelete={

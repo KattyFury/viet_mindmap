@@ -24,6 +24,11 @@ export interface MindNode {
    * Reflow theo field này — KHÔNG sort theo x/y (tránh nhánh mới chen giữa).
    */
   siblingOrder: number;
+  /**
+   * Chiều cao box đo được (world px, không nhân scale) — box GROW theo nội
+   * dung, không giới hạn số dòng. undefined → dùng default (defaultBoxHeight).
+   */
+  h?: number;
 }
 
 export interface MindMapDoc {
