@@ -3,8 +3,10 @@ import type { Direction, MindNode } from "./types";
 
 /**
  * Khoảng hở mép parent → mép child (không liên quan độ dài line).
+ * Dùng chung 1 công thức (× decay theo level) cho MỌI cặp parent-child —
+ * mother→child hay child→child (cháu) đều đồng bộ, chỉ khác độ sâu.
  */
-export const EDGE_GAP = 100;
+export const EDGE_GAP = 80; // 4/5 của 100 cũ
 export const EDGE_GAP_VERTICAL = 140;
 
 /** Hở mép giữa 2 sibling / 2 subtree kề nhau (cộng thêm vào size khi xếp) */

@@ -112,7 +112,17 @@ User dùng thử xong yêu cầu bỏ luôn sự khác biệt size giữa root/c
 - `MindNodeBox.tsx`: bỏ nhánh `isRoot` cho `w`, `fontSize`, `defaultH`, `plusSize` (26→22), size icon trong nút + (16→14) — tất cả về chung 1 giá trị (giá trị cũ của CHILD, vì mô tả của user lấy child làm chuẩn "còn child thì...").
 - **CHỈ GIỮ LẠI khác biệt màu** (đã đúng sẵn từ trước, không cần đổi gì): `bg = isRoot ? rootColor : "#FFFFFF"`, `fg = isRoot ? contrastText(rootColor) : "#000000"`, `border = isRoot ? rootColor : (custom ? customColor : node.color)`. `rootColor` = `ROOT_COLOR` (đen) ở rainbow mode, `customColor` ở custom mode — logic màu mục 3b không đổi.
 - Các `isRoot` KHÔNG đụng (không phải "size/config" theo nghĩa user hỏi, mà là cấu trúc bắt buộc): `plusDirs` (root không có hướng cha để ẩn bớt nút +), root không kéo-thả được, root không xoá được bằng Delete — những cái này giữ nguyên vì là quy tắc đã LOCKED từ trước, không phải thứ đang được "hợp nhất".
-- Verify: đo `boundingBox()` root và child cạnh nhau → width/height bằng nhau tuyệt đối (324×54 lúc rỗng). Đổi custom color → root nền đổi màu đúng, child border+line đổi màu đúng, chữ root/child giữ trắng/đen như mô tả.
+- Verify: đo `boundingBox()` root và child cạnh nhau → width/height bằng nhau tuyệt đối (324×54 lúc rỗng — xem mục 3g, width sau đó giảm còn 259). Đổi custom color → root nền đổi màu đúng, child border+line đổi màu đúng, chữ root/child giữ trắng/đen như mô tả.
+
+### 3g. Chốt cuối: box hẹp lại 4/5, gap ngang hẹp lại 4/5
+
+User: "chiều ngang của 1 mother hoặc child nhỏ lại nha, nhỏ còn 4/5" + "cách ngang giữa mother với child hoặc child với child cũng đang khá nhiều, cho nó đồng bộ và nhỏ lại còn 4/5 đi".
+
+- `BOX_W`: 324 → **259** (`Math.round(324*0.8)`, `constants.ts`).
+- `EDGE_GAP` (`layout.ts`): 100 → **80**. Công thức `EDGE_GAP × decay^level` trong `branchOffset()` vốn ĐÃ dùng chung cho mọi cặp parent-child (mother→child hay child→child/cháu) — nên chỉ cần đổi 1 hằng số là tự động đồng bộ toàn cây, không cần sửa gì khác.
+- `SIBLING_EDGE_GAP` (gap dọc giữa 2 sibling) — KHÔNG đụng, user chỉ nói "cách ngang" (horizontal).
+
+**Ý tưởng "trăm sông về 1 biển" bị BỎ QUA (user tự chốt khi được hỏi lại):** nút gộp mọi nhánh trái/phải hội tụ về 1 node khác, biến mindmap thành 1 vòng khép kín. Tin nhắn gốc bị ngắt giữa chừng, mô tả geometry không đủ rõ ("gốc bên trái thì gốc 2 bên phải" — chưa hiểu chính xác), và đây là thay đổi kiến trúc RẤT lớn (cây → đồ thị có chu trình) đụng vào gần như mọi rule LOCKED (reflow bottom-up giả định cây không chu trình, no-overlap dựa trên subtree, export bounds, undo snapshot...). Đã hỏi lại — user chọn bỏ qua, chỉ giữ phần width/gap. **Đừng tự ý implement ý tưởng này sau này** trừ khi user chủ động nhắc lại VÀ mô tả rõ geometry mong muốn.
 
 ---
 

@@ -17,7 +17,7 @@ export const BOX_PAD_X = 8;
 export const BOX_PAD_Y = 16;
 
 /** Bề rộng box — CỐ ĐỊNH (root = child), chỉ chiều CAO mới grow theo nội dung */
-export const BOX_W = 324;
+export const BOX_W = 259; // 4/5 của 324 cũ
 
 /** Chiều cao box lúc rỗng/ngắn (world px) — grow thêm khi nội dung dài hơn. */
 export function defaultBoxHeight(): number {

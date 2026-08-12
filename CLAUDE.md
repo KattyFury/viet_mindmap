@@ -77,7 +77,7 @@ These were decided after repeated user corrections. **Do not change without expl
 
 ### Box size — GROW theo nội dung, không còn max (đại tu 2026-08-12, xem `HANDOFF.md` mục 2+3)
 - **KHÔNG giới hạn số dòng lẫn ký tự.** Box chỉ có kích thước MẶC ĐỊNH lúc rỗng/ngắn (`defaultBoxHeight()` trong `constants.ts`), gõ dài hơn thì box **cao ra tự do**, không trần.
-  - **Root (Mother) và Child GIỐNG HỆT nhau** về size/font/config (đã hợp nhất 2026-08-12, sau khi từng tách riêng 200px/1 dòng cho root — user đổi ý, xem `HANDOFF.md` mục 3f): rộng cố định **324px** (`BOX_W`), mặc định **2 dòng** (`DEFAULT_LINES`).
+  - **Root (Mother) và Child GIỐNG HỆT nhau** về size/font/config (đã hợp nhất 2026-08-12, sau khi từng tách riêng 200px/1 dòng cho root — user đổi ý, xem `HANDOFF.md` mục 3f): rộng cố định **259px** (`BOX_W`, đã giảm 4/5 từ 324 — user chê box to), mặc định **2 dòng** (`DEFAULT_LINES`).
   - Bề rộng LUÔN cố định — chỉ chiều cao grow. `defaultBoxHeight()` không còn tham số `isRoot`.
   - **Khác biệt DUY NHẤT giữa root/child là MÀU:** root = nền SOLID (đen mặc định, hoặc customColor ở chế độ custom) + chữ trắng/tự-contrast; child = nền trắng + viền cùng màu với line (branch color hoặc customColor) + chữ đen. Đừng thêm bất kỳ khác biệt size/config nào khác giữa root và child.
 - **Không đè nhau (LOCKED, mở rộng từ rule cũ):** vì box cao động, mỗi lần `updateText` (commit — blur/Enter) đo chiều cao thật rồi `reflowAll` lại toàn cây — nhánh khác tự nhường chỗ theo chiều cao mới. Trong lúc đang gõ (chưa commit), box tự nó lớn lên live (không reflow cây, chỉ node đang edit — chấp nhận đè tạm lúc edit, ổn định lại khi commit).
@@ -124,7 +124,7 @@ These were decided after repeated user corrections. **Do not change without expl
 - No CSS `transform: scale` on text; scale size/font in layout.
 - Border-radius **scales with zoom** (not fixed `rem`).
 - **No overlap (LOCKED):** boxes / subtrees must never overlap. Reflow is bottom-up by **full subtree height** (`reflowAll` / `reflowSiblings` in `layout.ts`), not single-box gap only. Adjacent sibling subtrees keep ≥ `SIBLING_EDGE_GAP` (with decay floor). Stack is centered on parent → upper branches are pushed **up**, lower ones **down**. After add / delete / relocate / migrate / hydrate, always `reflowAll` from root.
-- **Spacing (đã chỉnh):** `SIBLING_EDGE_GAP = 36` (từng 72, giảm ½ vì map loãng), sàn `siblingEdgeGap` = **24**. Parent→child: `EDGE_GAP = 100`, `EDGE_GAP_VERTICAL = 140`. Đừng nới gap trừ khi user bảo.
+- **Spacing (đã chỉnh):** `SIBLING_EDGE_GAP = 36` (từng 72, giảm ½ vì map loãng), sàn `siblingEdgeGap` = **24**. Parent→child: `EDGE_GAP = 80` (từng 100, giảm 4/5 — công thức `EDGE_GAP × decay^level` dùng chung cho MỌI cặp parent-child, mother→child hay child→child đều tự động đồng bộ, không cần sửa gì thêm khi đổi hằng số này), `EDGE_GAP_VERTICAL = 140`. Đừng nới gap trừ khi user bảo.
 
 ### Phím tắt (LOCKED — đã sửa theo feedback user)
 | Phím | Hành vi |

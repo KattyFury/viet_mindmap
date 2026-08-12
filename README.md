@@ -76,7 +76,7 @@ Mở http://localhost:3000
 ### Spacing / không chồng lấn
 - Reflow **bottom-up theo chiều cao cả subtree** (`reflowAll`) — box không được đè nhau
 - Hở sibling (mép subtree): `SIBLING_EDGE_GAP = 36` (đã giảm ½ so với 72 vì map loãng), sàn 24
-- Parent→child: `EDGE_GAP = 100`
+- Parent→child: `EDGE_GAP = 80`
 - Hydrate / add / xóa / kéo → luôn reflow cả cây từ root
 
 ### Phím tắt
@@ -91,7 +91,7 @@ Mở http://localhost:3000
 | Cuộn | Zoom |
 
 ### Text — box GROW theo nội dung, không có trần
-- **Không giới hạn số dòng lẫn ký tự.** Box chỉ có size mặc định lúc rỗng/ngắn: **2 dòng, rộng 324px** — root và child giống hệt nhau về kích thước, gõ dài hơn thì box cao ra tự do
+- **Không giới hạn số dòng lẫn ký tự.** Box chỉ có size mặc định lúc rỗng/ngắn: **2 dòng, rộng 259px** — root và child giống hệt nhau về kích thước, gõ dài hơn thì box cao ra tự do
 - Root và child đều căn giữa
 - Wrap theo width thật của box (CSS) · wrap theo **từ** (không cắt giữa “chó”) · IME VN an toàn
 - Box khác không đè lên nhau — mỗi lần gõ xong (Enter/blur) tự đo lại chiều cao rồi xếp lại cả cây
