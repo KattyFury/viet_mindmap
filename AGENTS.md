@@ -19,14 +19,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Layout: **không chồng lấn** — `reflowAll` theo **chiều cao subtree**; sibling gap `SIBLING_EDGE_GAP=36`, sàn 24.
 - **Tab** = child của node đang chọn (cùng hướng), **không** sibling từ mother.
 - **Delete** = xóa child + subtree **cả khi đang type**; root không xóa.
-- Text: 2 dòng; root 20/dòng; child 30/dòng; wrap theo từ; Enter = xong; Ctrl+Enter = xuống dòng.
+- Text: KHÔNG giới hạn ký tự/dòng — chỉ giới hạn số dòng (root 2, child 3); root center, child left; chặn gõ khi đo chiều cao thật (scrollHeight) vượt giới hạn, không đếm ký tự; wrap theo từ; Enter = xong; Ctrl+Enter = xuống dòng.
 - Line thẳng, dưới box, dig vào mép; ẩn line khi kéo child.
 
 ## File chính
 | Path | Vai trò |
 |------|---------|
 | `src/lib/layout.ts` | reflow, line, gap, subtree |
-| `src/lib/text.ts` | clamp / wrap tiếng Việt |
+| `src/lib/text.ts` | cap số newline tường minh (an toàn data cũ), canInsertNewline |
 | `src/store/mindmap-store.ts` | maps, add/delete, hydrate+reflowAll |
 | `src/components/MindMapCanvas.tsx` | phím tắt global, canvas |
-| `src/components/MindNodeBox.tsx` | edit, Tab/Delete khi type, [+] |
+| `src/components/MindNodeBox.tsx` | edit, Tab/Delete khi type, [+], đo scrollHeight để chặn gõ khi đầy |

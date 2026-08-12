@@ -2,7 +2,8 @@
 
 Mindmap chuẩn từng khoảng cách — tối ưu tiếng Việt.
 
-**Folder:** `D:\Files\Claude\viet_mindmap`  
+**Folder:** `D:\Files\Claude\build_for_me\vietmindmap`
+**Handoff:** xem `HANDOFF.md` (trạng thái cuối) + `CLAUDE.md` §5 (rule khóa)
 **Slogan / brand:** VietMindmap · Local-first (Google auth optional)
 
 ### Dùng trên web (không cần đăng nhập)
@@ -26,7 +27,7 @@ Double-click icon **`VietMindmap`** trên Desktop.
 Nếu mất shortcut, tạo lại:
 
 ```powershell
-cd D:\Files\Claude\viet_mindmap
+cd D:\Files\Claude\build_for_me\vietmindmap
 powershell -ExecutionPolicy Bypass -File .\scripts\install-desktop-shortcut.ps1
 ```
 
@@ -38,7 +39,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-desktop-shortcut.ps1
 
 ### Hoặc tay
 ```powershell
-cd D:\Files\Claude\viet_mindmap
+cd D:\Files\Claude\build_for_me\vietmindmap
 npm run dev
 ```
 Mở http://localhost:3000
@@ -91,8 +92,9 @@ Mở http://localhost:3000
 | Cuộn | Zoom |
 
 ### Text
-- 2 dòng · root 20 ký tự/dòng · child 30/dòng
-- Full → chặn gõ · wrap theo **từ** (không cắt giữa “chó”) · IME VN an toàn
+- **Không giới hạn ký tự/dòng** — chỉ giới hạn số dòng: root **2 dòng**, child **3 dòng**
+- Root căn giữa · child căn **trái**
+- Wrap theo width thật của box (CSS), full → chặn gõ (đo chiều cao thật, không đếm ký tự) · wrap theo **từ** (không cắt giữa “chó”) · IME VN an toàn
 
 ### Màu (6, bỏ chàm)
 Đỏ · Cam · Vàng · Lục · Lam · Tím
