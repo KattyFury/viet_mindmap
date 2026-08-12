@@ -1,10 +1,4 @@
-import {
-  BASE_GAP,
-  BOX_W,
-  GAP_DECAY,
-  ROOT_BOX_W,
-  defaultBoxHeight,
-} from "./constants";
+import { BASE_GAP, BOX_W, GAP_DECAY, defaultBoxHeight } from "./constants";
 import type { Direction, MindNode } from "./types";
 
 /**
@@ -23,13 +17,9 @@ export function isRootNode(node: MindNode): boolean {
   return node.parentId === null || node.level === 0;
 }
 
-/** Box GROW theo nội dung — w cố định theo loại node, h lấy từ node.h đo được (fallback default). */
+/** Box GROW theo nội dung — root/child cùng size, h lấy từ node.h đo được (fallback default). */
 export function nodeBoxSize(node: MindNode): { w: number; h: number } {
-  const root = isRootNode(node);
-  return {
-    w: root ? ROOT_BOX_W : BOX_W,
-    h: node.h ?? defaultBoxHeight(root),
-  };
+  return { w: BOX_W, h: node.h ?? defaultBoxHeight() };
 }
 
 /**
@@ -46,7 +36,7 @@ export function siblingCenterGap(
   if (direction === "up" || direction === "down") {
     return (BOX_W + SIBLING_EDGE_GAP) * decay;
   }
-  return (defaultBoxHeight(false) + SIBLING_EDGE_GAP) * decay;
+  return (defaultBoxHeight() + SIBLING_EDGE_GAP) * decay;
 }
 
 /** @deprecated dùng siblingCenterGap */
@@ -67,7 +57,7 @@ export function branchOffset(
   level: number
 ) {
   const p = nodeBoxSize(parent);
-  const c = { w: BOX_W, h: defaultBoxHeight(false) };
+  const c = { w: BOX_W, h: defaultBoxHeight() };
   const decay = Math.pow(GAP_DECAY, Math.max(0, level - 1));
   const gapH = EDGE_GAP * decay;
   const gapV = EDGE_GAP_VERTICAL * decay;
@@ -441,7 +431,7 @@ export function boundsOfNodes(nodes: MindNode[]): {
   height: number;
 } {
   if (nodes.length === 0) {
-    const h = defaultBoxHeight(false);
+    const h = defaultBoxHeight();
     return { minX: 0, minY: 0, maxX: BOX_W, maxY: h, width: BOX_W, height: h };
   }
   let minX = Infinity;

@@ -2,29 +2,26 @@ import type { BranchColor } from "./types";
 
 /**
  * KHÔNG giới hạn số dòng/ký tự — box GROW theo nội dung, tùy ý bao nhiêu dòng.
- * *_DEFAULT_LINES chỉ là kích thước lúc box rỗng/ngắn (chưa cần grow).
+ * DEFAULT_LINES chỉ là kích thước lúc box rỗng/ngắn (chưa cần grow).
+ * Root (Mother) và Child GIỐNG HỆT nhau về size/font/config — chỉ khác màu
+ * (root nền solid chữ trắng, child nền trắng viền màu chữ đen).
  */
-export const ROOT_DEFAULT_LINES = 1;
-export const CHILD_DEFAULT_LINES = 2;
+export const DEFAULT_LINES = 2;
 
 export const FONT_SIZE = 14;
 export const LINE_HEIGHT = 1.35;
-export const ROOT_FONT_SIZE = Math.round(FONT_SIZE * 1.2); // 17 — trước 1.5x (21) nhìn quá to
 
 /** Padding ngang trong box (px) — sát chữ, không dư 2 bên */
 export const BOX_PAD_X = 8;
 /** Padding dọc trong box (px, top+bottom cộng lại) */
 export const BOX_PAD_Y = 16;
 
-/** Bề rộng box — CỐ ĐỊNH, chỉ chiều CAO mới grow theo nội dung */
+/** Bề rộng box — CỐ ĐỊNH (root = child), chỉ chiều CAO mới grow theo nội dung */
 export const BOX_W = 324;
-export const ROOT_BOX_W = 200;
 
 /** Chiều cao box lúc rỗng/ngắn (world px) — grow thêm khi nội dung dài hơn. */
-export function defaultBoxHeight(isRoot: boolean): number {
-  const font = isRoot ? ROOT_FONT_SIZE : FONT_SIZE;
-  const lines = isRoot ? ROOT_DEFAULT_LINES : CHILD_DEFAULT_LINES;
-  return Math.ceil(font * LINE_HEIGHT * lines + BOX_PAD_Y);
+export function defaultBoxHeight(): number {
+  return Math.ceil(FONT_SIZE * LINE_HEIGHT * DEFAULT_LINES + BOX_PAD_Y);
 }
 
 /** Horizontal/vertical gap between siblings at level 1 */

@@ -19,8 +19,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Layout: **không chồng lấn** — `reflowAll` theo **chiều cao subtree**; sibling gap `SIBLING_EDGE_GAP=36`, sàn 24.
 - **Tab** = child của node đang chọn (cùng hướng), **không** sibling từ mother.
 - **Delete** = xóa child + subtree **cả khi đang type**; root không xóa.
-- Text: KHÔNG giới hạn số dòng/ký tự — box GROW theo nội dung (root mặc định 1 dòng/200px, child 2 dòng/324px, bề rộng cố định); cả root và child đều căn giữa; mỗi commit đo chiều cao thật (`scrollHeight`, phải tạm bỏ height/padding trước khi đo) rồi `reflowAll`; wrap theo từ; Enter = xong; Ctrl+Enter = xuống dòng (không giới hạn số lần); `<textarea>` PHẢI có `rows={1}` (thiếu → browser mặc định 2 dòng, sai phép đo root).
+- Text: KHÔNG giới hạn số dòng/ký tự — box GROW theo nội dung, mặc định **2 dòng/324px rộng** (root và child GIỐNG HỆT nhau, không còn size riêng cho root); cả root và child đều căn giữa; mỗi commit đo chiều cao thật (`scrollHeight`, phải tạm bỏ height/padding trước khi đo) rồi `reflowAll`; wrap theo từ; Enter = xong; Ctrl+Enter = xuống dòng (không giới hạn số lần); `<textarea>` PHẢI có `rows={1}`.
 - Line thẳng, dưới box, dig vào mép; ẩn line khi kéo child.
+- **Root/Child chỉ khác nhau ở MÀU** (không khác size/font/config gì khác): root = nền solid (đen mặc định, customColor ở chế độ custom) + chữ trắng/tự-contrast; child = nền trắng + viền cùng màu line + chữ đen. Đừng tự ý thêm khác biệt size nào giữa 2 loại node.
 - Màu: 2 chế độ CHUNG TOÀN APP (không theo mindmap) — rainbow (6 màu/nhánh, mặc định) hoặc custom (1 màu cho mọi box+line+nền root). State ở `useMindmapStore` (`colorMode`/`customColor`), persist `localStorage` riêng (`color-settings.ts`), UI ở `ColorModeMenu.tsx`.
 - Sidebar: không có ô tài khoản/thùng rác kéo-thả nữa — mỗi map = tên + nút X (confirm dialog xóa), nút + cuối list tạo map mới, rộng `SIDEBAR_W=225`.
 

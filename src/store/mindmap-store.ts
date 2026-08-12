@@ -339,8 +339,7 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
     const map = get().getActiveMap();
     if (!map || !map.nodes[id]) return;
     pushHistory(set, get);
-    const isRootNode = id === map.rootId;
-    get().updateText(id, "", defaultBoxHeight(isRootNode));
+    get().updateText(id, "", defaultBoxHeight());
   },
 
   undo: () => {

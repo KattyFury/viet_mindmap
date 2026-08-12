@@ -65,7 +65,7 @@ Mở http://localhost:3000
 - Mobile: chỉ xem
 
 ### Mindmap core
-- Root đen (hoặc màu custom — xem mục Màu) · child trắng + viền màu
+- Root và child **cùng kích thước/font hệt nhau** — chỉ khác màu: root nền solid (đen, hoặc custom) + chữ trắng · child nền trắng + viền cùng màu line + chữ đen
 - **Chỉ nhánh trái / phải** (không trên/dưới)
 - [+] 2 hướng (root) / 1 hướng còn lại (child)
 - Line **thẳng**, dưới box, dig vào mép
@@ -91,7 +91,7 @@ Mở http://localhost:3000
 | Cuộn | Zoom |
 
 ### Text — box GROW theo nội dung, không có trần
-- **Không giới hạn số dòng lẫn ký tự.** Box chỉ có size mặc định lúc rỗng/ngắn: root **1 dòng** (rộng 200px), child **2 dòng** (rộng 324px) — gõ dài hơn thì box cao ra tự do, bề rộng luôn cố định
+- **Không giới hạn số dòng lẫn ký tự.** Box chỉ có size mặc định lúc rỗng/ngắn: **2 dòng, rộng 324px** — root và child giống hệt nhau về kích thước, gõ dài hơn thì box cao ra tự do
 - Root và child đều căn giữa
 - Wrap theo width thật của box (CSS) · wrap theo **từ** (không cắt giữa “chó”) · IME VN an toàn
 - Box khác không đè lên nhau — mỗi lần gõ xong (Enter/blur) tự đo lại chiều cao rồi xếp lại cả cây

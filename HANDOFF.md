@@ -26,11 +26,11 @@ Mindmap 1 trang, tối ưu cho tiếng Việt (wrap không cắt giữa từ), c
 
 ## 1. Trạng thái tính năng (đã chốt, cập nhật 2026-08-12 cuối ngày)
 
-- **Layout:** root đen giữa (hoặc màu custom — mục 3b), child trắng viền màu, chỉ nhánh **trái/phải** (không trên/dưới); line thẳng dưới box, dig vào mép; ẩn line khi kéo child.
+- **Layout:** root và child **CÙNG kích thước/font hệt nhau** (hợp nhất mục 3f) — khác DUY NHẤT ở màu: root nền solid (đen, hoặc custom — mục 3b) + chữ trắng; child nền trắng + viền cùng màu line + chữ đen. Chỉ nhánh **trái/phải** (không trên/dưới); line thẳng dưới box, dig vào mép; ẩn line khi kéo child.
 - **Không chồng lấn:** `reflowAll` bottom-up theo chiều cao cả subtree (`src/lib/layout.ts`); mọi commit text/add/xóa/kéo/hydrate đều reflow lại từ root.
 - **Phím tắt:** Tab = tạo child của node đang chọn (không phải sibling từ mother) · Enter = commit · Ctrl+Enter = xuống dòng (không giới hạn số lần) · Delete = xóa child+subtree kể cả đang type (không xóa root) · Ctrl+Z/Y = undo/redo · cuộn = zoom.
 - **Export:** PNG full map qua `html-to-image` (`src/lib/export-png.ts`) — render thẳng từ DOM đang hiển thị, không có pipeline canvas riêng.
-- **Text trong box (BẢN CUỐI — xem mục 3):** KHÔNG giới hạn số dòng lẫn ký tự — box GROW theo nội dung. Mặc định lúc rỗng/ngắn: root 1 dòng/200px, child 2 dòng/324px (bề rộng cố định, chỉ cao grow). Cả root và child đều **center** (left-align đã bị thử và bác bỏ — đừng đề xuất lại).
+- **Text trong box (BẢN CUỐI — xem mục 3):** KHÔNG giới hạn số dòng lẫn ký tự — box GROW theo nội dung. Mặc định lúc rỗng/ngắn: **2 dòng, rộng 324px** — root và child dùng chung 1 config (mục 3f). Cả root và child đều **center** (left-align đã bị thử và bác bỏ — đừng đề xuất lại).
 - **Màu (mục 3b):** 2 chế độ CHUNG TOÀN APP — rainbow (6 màu/nhánh, mặc định) hoặc custom (1 màu cho mọi box+line+nền root).
 - **Sidebar (mục 3c):** tối giản — mỗi map = tên + nút X (confirm xóa) + kéo-thả reorder; nút + cuối list tạo map mới; rộng 225px. Không còn ô tài khoản/thùng rác kéo-thả.
 
@@ -102,6 +102,17 @@ User trỏ `github.com/topics/mindmap` bảo "tìm tòi rồi làm 1 cái mindma
 ### 3e. Verify đã làm
 
 Không có browser-automation tool sẵn trong môi trường → tự cài Playwright vào scratchpad (`npm i playwright` ngoài project, không đụng `package.json`). Test thực tế: tạo map → gõ dài → box grow, xóa chữ → box co lại; 3 child cạnh nhau độ dài khác nhau → không đè (đo `getBoundingClientRect` từng cặp, verify không giao nhau); Ctrl+Enter 4-5 lần liên tiếp không bị chặn; kéo-thả relocate child vẫn hoạt động với box cao động; đổi rainbow↔custom, chọn màu vàng cho root → chữ tự đổi đen; xóa map qua X → confirm dialog → xóa đúng map; caret canh giữa đúng cho cả root rỗng (1 dòng) và child rỗng (2 dòng mặc định). Tất cả pass, 0 lỗi console. `tsc --noEmit` / `next build` / `eslint` sạch — lint giữ nguyên baseline 5 lỗi có sẵn từ trước (đã verify bằng `git stash` so sánh), warnings +2 (do 2 prop `_email`/`_authEnabled` mới không dùng, theo đúng convention `_name` có sẵn).
+
+### 3f. Chốt ngay sau đó: hợp nhất root/child — chỉ khác MÀU, không khác gì khác
+
+User dùng thử xong yêu cầu bỏ luôn sự khác biệt size giữa root/child vừa làm ở mục 3a: **"Mother không khác gì các Child về kích thước và cấu hình ngoài 1 điểm duy nhất — Mother luôn là nền SOLID chữ TRẮNG còn các child là chỉ có nền trắng còn stroke của box thì cùng màu với line, còn chữ thì đen."**
+
+- Xoá hẳn `ROOT_BOX_W` (200), `ROOT_FONT_SIZE` (17), `ROOT_DEFAULT_LINES` (1) khỏi `constants.ts`. Chỉ còn 1 bộ dùng chung: `BOX_W=324`, `FONT_SIZE=14`, `DEFAULT_LINES=2`. `defaultBoxHeight()` bỏ tham số `isRoot`.
+- `layout.ts`'s `nodeBoxSize()` không còn nhánh theo `isRootNode()` cho `w`/`h` nữa — luôn `{w: BOX_W, h: node.h ?? defaultBoxHeight()}`.
+- `MindNodeBox.tsx`: bỏ nhánh `isRoot` cho `w`, `fontSize`, `defaultH`, `plusSize` (26→22), size icon trong nút + (16→14) — tất cả về chung 1 giá trị (giá trị cũ của CHILD, vì mô tả của user lấy child làm chuẩn "còn child thì...").
+- **CHỈ GIỮ LẠI khác biệt màu** (đã đúng sẵn từ trước, không cần đổi gì): `bg = isRoot ? rootColor : "#FFFFFF"`, `fg = isRoot ? contrastText(rootColor) : "#000000"`, `border = isRoot ? rootColor : (custom ? customColor : node.color)`. `rootColor` = `ROOT_COLOR` (đen) ở rainbow mode, `customColor` ở custom mode — logic màu mục 3b không đổi.
+- Các `isRoot` KHÔNG đụng (không phải "size/config" theo nghĩa user hỏi, mà là cấu trúc bắt buộc): `plusDirs` (root không có hướng cha để ẩn bớt nút +), root không kéo-thả được, root không xoá được bằng Delete — những cái này giữ nguyên vì là quy tắc đã LOCKED từ trước, không phải thứ đang được "hợp nhất".
+- Verify: đo `boundingBox()` root và child cạnh nhau → width/height bằng nhau tuyệt đối (324×54 lúc rỗng). Đổi custom color → root nền đổi màu đúng, child border+line đổi màu đúng, chữ root/child giữ trắng/đen như mô tả.
 
 ---
 

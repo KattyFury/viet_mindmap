@@ -77,12 +77,12 @@ These were decided after repeated user corrections. **Do not change without expl
 
 ### Box size — GROW theo nội dung, không còn max (đại tu 2026-08-12, xem `HANDOFF.md` mục 2+3)
 - **KHÔNG giới hạn số dòng lẫn ký tự.** Box chỉ có kích thước MẶC ĐỊNH lúc rỗng/ngắn (`defaultBoxHeight()` trong `constants.ts`), gõ dài hơn thì box **cao ra tự do**, không trần.
-  - Root: rộng cố định **200px**, mặc định **1 dòng** (`ROOT_DEFAULT_LINES`).
-  - Child: rộng cố định **324px**, mặc định **2 dòng** (`CHILD_DEFAULT_LINES`).
-  - Bề rộng LUÔN cố định theo loại node — chỉ chiều cao grow.
+  - **Root (Mother) và Child GIỐNG HỆT nhau** về size/font/config (đã hợp nhất 2026-08-12, sau khi từng tách riêng 200px/1 dòng cho root — user đổi ý, xem `HANDOFF.md` mục 3f): rộng cố định **324px** (`BOX_W`), mặc định **2 dòng** (`DEFAULT_LINES`).
+  - Bề rộng LUÔN cố định — chỉ chiều cao grow. `defaultBoxHeight()` không còn tham số `isRoot`.
+  - **Khác biệt DUY NHẤT giữa root/child là MÀU:** root = nền SOLID (đen mặc định, hoặc customColor ở chế độ custom) + chữ trắng/tự-contrast; child = nền trắng + viền cùng màu với line (branch color hoặc customColor) + chữ đen. Đừng thêm bất kỳ khác biệt size/config nào khác giữa root và child.
 - **Không đè nhau (LOCKED, mở rộng từ rule cũ):** vì box cao động, mỗi lần `updateText` (commit — blur/Enter) đo chiều cao thật rồi `reflowAll` lại toàn cây — nhánh khác tự nhường chỗ theo chiều cao mới. Trong lúc đang gõ (chưa commit), box tự nó lớn lên live (không reflow cây, chỉ node đang edit — chấp nhận đè tạm lúc edit, ổn định lại khi commit).
 - Đo chiều cao = đo DOM thật (`scrollHeight`), KHÔNG suy ra từ số ký tự — vì `scrollHeight` bị "sàn" ở height/padding hiện tại của element (không bao giờ báo NHỎ hơn), nên đo xong phải **tạm bỏ height + padding** (set `auto`/`0`) rồi mới đọc, để box CO LẠI được khi xóa chữ. Xem `measureAndApplyTextareaBox()` trong `MindNodeBox.tsx`.
-- `<textarea>` PHẢI có `rows={1}` tường minh — thiếu `rows` thì browser mặc định cao tối thiểu 2 dòng, làm sai phép đo cho root (mặc định chỉ 1 dòng) → caret bị đẩy lệch lên trên thay vì canh giữa.
+- `<textarea>` PHẢI có `rows={1}` tường minh — thiếu `rows` thì browser tự áp height mặc định (2 dòng) TRƯỚC khi JS kịp đo/set, làm sai `scrollHeight` (từng gây caret lệch lên trên khi root/child còn khác default lines; giờ vẫn giữ `rows={1}` cho chắc dù cả 2 đã cùng 2 dòng mặc định).
 - Canh giữa dọc: vì box có thể cao hơn nội dung thật (đang ở mức sàn default), phần dư phải **chia đều top/bottom**, không dồn hết lên trên/dưới — đây chính là bug đã gặp (caret lệch lên) và đã sửa 2026-08-12.
 - Wrap là việc của **CSS** (`whiteSpace: break-spaces`, `wordBreak: keep-all`, `overflowWrap: break-word`) theo width thật của box — KHÔNG tự chèn `\n` theo char-count.
 - Dùng `break-spaces` (không phải `pre-wrap`) — nếu không, space cuối dòng bị CSS coi là "hanging" (không tính vào scrollHeight) → đo chiều cao sẽ sai/lọt.

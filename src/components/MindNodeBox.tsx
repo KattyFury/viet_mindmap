@@ -14,9 +14,7 @@ import {
   BOX_W,
   FONT_SIZE,
   LINE_HEIGHT,
-  ROOT_BOX_W,
   ROOT_COLOR,
-  ROOT_FONT_SIZE,
   STROKE_WIDTH,
   STROKE_WIDTH_SELECTED,
   defaultBoxHeight,
@@ -95,11 +93,12 @@ export function MindNodeBox({
 }: MindNodeBoxProps) {
   const isRoot = node.parentId === null;
   const s = scale;
-  const w = (isRoot ? ROOT_BOX_W : BOX_W) * s;
-  const fontSize = (isRoot ? ROOT_FONT_SIZE : FONT_SIZE) * s;
+  /** Root/Child GIỐNG HỆT nhau về size/font — chỉ khác màu (bg/border/chữ). */
+  const w = BOX_W * s;
+  const fontSize = FONT_SIZE * s;
   const padX = BOX_PAD_X * s;
   const padY = (BOX_PAD_Y / 2) * s;
-  const defaultH = defaultBoxHeight(isRoot);
+  const defaultH = defaultBoxHeight();
   /** Box grow theo nội dung, không giới hạn số dòng. */
   const committedH = node.h ?? defaultH;
 
@@ -184,7 +183,7 @@ export function MindNodeBox({
   const bg = isRoot ? rootColor : "#FFFFFF";
   const fg = isRoot ? contrastText(rootColor) : "#000000";
   const border = isRoot ? rootColor : custom ? customColor : (node.color as string);
-  const plusSize = (isRoot ? 26 : 22) * s;
+  const plusSize = 22 * s;
 
   function plusStyle(dir: Direction): CSSProperties {
     const half = plusSize / 2;
@@ -469,7 +468,7 @@ export function MindNodeBox({
               onAdd(dir);
             }}
           >
-            <IconPlus size={Math.max(12, (isRoot ? 16 : 14) * s)} />
+            <IconPlus size={Math.max(12, 14 * s)} />
           </button>
         ))}
     </div>
