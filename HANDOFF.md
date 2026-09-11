@@ -1,6 +1,6 @@
 # HANDOFF – VietMindmap
 
-**Cập nhật:** 2026-08-12 · **Local:** `D:\Files\Claude\build_for_me\vietmindmap`
+**Cập nhật:** 2026-09-11 · **Local:** `D:\Files\Claude\Personal\vietmindmap`
 
 ### 🔗 LINK CHÍNH
 
@@ -144,7 +144,21 @@ User: "chiều ngang của 1 mother hoặc child nhỏ lại nha, nhỏ còn 4/5
 
 ---
 
-## 5. Việc chưa làm / để dành
+## 5. Phiên 2026-09-11 — lưới bội số 8 + sửa bug lệch bố cục khi 1 nhánh có nhiều con
+
+User gửi ảnh: root có 2 nhánh (A 0 con, B 8 con) — nhánh A bị đẩy lệch hẳn lên góc trên xa root, trong khi B lại nằm sát ngang root. Yêu cầu: (1) mọi font size/box/spacing theo bội số 8, (2) 2 nhánh cùng cấp phải "đều nhau".
+
+**(1) Bội số 8:** `FONT_SIZE` 14→**16**, `LINE_HEIGHT` 1.35→**1.5** (vẫn unitless để tự scale theo zoom — không đổi sang px cố định, tránh vỡ cơ chế đo `scrollHeight`/zoom hiện có), `BOX_W` 259→**256**, `SIDEBAR_W` 225→**224**, `EDGE_GAP_VERTICAL` 140→**144**, `SIBLING_EDGE_GAP` 36→**32**. `defaultBoxHeight()` giờ ra đúng **64** (48 content + 16 pad, cả 2 đều bội số 8). `STROKE_WIDTH`/`BOX_RADIUS` không đụng (không tính là "spacing").
+
+**(2) Root cause của bug lệch:** `reflowSiblings()` cũ tính "before/after" bằng `subtreeBounds()` — gộp CẢ subtree (mọi cháu, chắt...) thành 1 khoảng Y duy nhất, không phân biệt cháu đó nằm ở X nào. Khi B có 8 con, con của B tự xoè đối xứng quanh B (đúng thiết kế), khiến subtree-bounds của B cực lớn theo cả 2 phía. Bước "canh giữa cả cụm A+B theo parent" sau đó dùng đúng khoảng lớn này làm tâm, kéo A (nhỏ xíu, không con) bay xa lên trên — dù A và con-của-B **không hề chồng lấn thật** (con của B ở level 2, dịch xa hơn sang phải, khác hẳn cột X so với A ở level 1).
+
+**Fix — `subtreeLevelProfile()` + `requiredCenterGap()` (`layout.ts`):** thay vì 1 khoảng before/after gộp cả subtree, đo before/after **riêng theo từng absolute level**. Vì `branchOffset()` chỉ phụ thuộc `level + hướng` (không phụ thuộc node cha cụ thể nào), MỌI node cùng level + cùng hướng luôn nằm đúng 1 dải X — nên chỉ level nào TRÙNG NHAU giữa 2 subtree kề nhau mới có nguy cơ chồng lấn thật, cần tính gap; level chỉ có ở 1 bên thì bỏ qua (không có gì để chồng). Canh giữa CỤM sibling-trực-tiếp (stackMin/stackMax) đổi từ "mép subtree" sang "box RIÊNG của sibling đầu/cuối" — nên hàng con trực tiếp luôn đối xứng quanh parent, còn cháu bên trong tự do xoè mà không kéo sibling khác theo.
+
+**Verify:** `tsc --noEmit` / `next build` / `eslint` đều sạch (không phát sinh warning mới). Playwright dựng lại ĐÚNG mindmap trong ảnh user gửi (root + A 0-con + B 8-con) → screenshot xác nhận A/B giờ nằm sát nhau, cân đối quanh root, B tự xoè 8 con bình thường. Test thêm case cả A VÀ B đều có con (2 và 5) → đo `getBoundingClientRect` toàn bộ node, 0 cặp chồng lấn — xác nhận cơ chế chống overlap theo level vẫn đúng khi cả 2 bên cùng có cháu.
+
+---
+
+## 6. Việc chưa làm / để dành
 
 - Auth Google + sync đa máy qua Supabase — hạ tầng có sẵn (schema JSON tree), **chưa gắn** (xem README mục "Auth Google").
 - Chưa có test tự động (không có thư mục test) — verify UI hiện tại là tay/Playwright ad-hoc ngoài repo.

@@ -8,8 +8,10 @@ import type { BranchColor } from "./types";
  */
 export const DEFAULT_LINES = 2;
 
-export const FONT_SIZE = 14;
-export const LINE_HEIGHT = 1.35;
+/** Mọi size/spacing trong file này theo lưới bội số 8 (8pt grid). */
+export const FONT_SIZE = 16;
+/** Unitless (nhân theo fontSize, tự scale đúng theo zoom) — 16×1.5=24, bội số 8. */
+export const LINE_HEIGHT = 1.5;
 
 /** Padding ngang trong box (px) — sát chữ, không dư 2 bên */
 export const BOX_PAD_X = 8;
@@ -17,7 +19,7 @@ export const BOX_PAD_X = 8;
 export const BOX_PAD_Y = 16;
 
 /** Bề rộng box — CỐ ĐỊNH (root = child), chỉ chiều CAO mới grow theo nội dung */
-export const BOX_W = 259; // 4/5 của 324 cũ
+export const BOX_W = 256; // bội số 8, gần nhất với 259 cũ
 
 /** Chiều cao box lúc rỗng/ngắn (world px) — grow thêm khi nội dung dài hơn. */
 export function defaultBoxHeight(): number {
@@ -42,7 +44,7 @@ export const BRANCH_COLORS: BranchColor[] = [
 
 export const ROOT_COLOR = "#111111" as const;
 
-export const SIDEBAR_W = 225; // 3/4 của 300 cũ
+export const SIDEBAR_W = 224; // bội số 8, gần nhất với 225 cũ
 
 export const MAX_UNDO = 10;
 
