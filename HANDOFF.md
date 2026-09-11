@@ -156,6 +156,16 @@ User gửi ảnh: root có 2 nhánh (A 0 con, B 8 con) — nhánh A bị đẩy 
 
 **Verify:** `tsc --noEmit` / `next build` / `eslint` đều sạch (không phát sinh warning mới). Playwright dựng lại ĐÚNG mindmap trong ảnh user gửi (root + A 0-con + B 8-con) → screenshot xác nhận A/B giờ nằm sát nhau, cân đối quanh root, B tự xoè 8 con bình thường. Test thêm case cả A VÀ B đều có con (2 và 5) → đo `getBoundingClientRect` toàn bộ node, 0 cặp chồng lấn — xác nhận cơ chế chống overlap theo level vẫn đúng khi cả 2 bên cùng có cháu.
 
+### 5b. Bug tiếp theo cùng phiên: 3+ sibling, 1 sibling giữa RỖNG vẫn làm 2 bên chồng lấn
+
+User gửi ảnh khác (thêm nhánh thứ 3 "Bảo mật phải tốt" — không con — chen giữa "Sử dụng phải dễ" và "Phải có những tính năng...") → 2 nhánh 2 bên (có cháu) bị đè lên nhau ở tầng cháu, dù nhánh giữa không hề có gì.
+
+**Root cause:** `requiredCenterGap()` ở mục 5 chỉ so **CẶP LIỀN KỀ** (`profiles[i-1]` với `profiles[i]`) rồi cộng dồn tuần tự. Khi sibling giữa (B) không có nội dung ở 1 level sâu nào đó, nó không "mang" được yêu cầu né nhau giữa A và C ở level đó sang bước tiếp theo — A và C tuy không liền kề nhau về mặt tính toán vẫn thực chất cùng dải X ở level cháu, nhưng thuật toán chưa từng so trực tiếp 2 profile này.
+
+**Fix — contour luỹ kế (`minCenterAgainstContour`, thay `requiredCenterGap`):** khi đặt sibling thứ i, so với **contour = độ vươn XA NHẤT (tuyệt đối) của TẤT CẢ sibling đã đặt trước đó, theo từng level** — không phải chỉ sibling ngay trước. `contour` là 1 `Map<level, absoluteAfter>` cập nhật luỹ kế: đặt xong sibling i thì merge (lấy max) vào contour, sibling rỗng ở giữa đơn giản không đóng góp gì vào contour (không xoá cũng không che mất phần A đã đóng góp trước đó). Đây là kỹ thuật "running contour" chuẩn trong vẽ cây tidy-tree (Reingold-Tilford/Walker), áp dụng rời rạc theo level thay vì contour liên tục.
+
+**Verify:** `tsc`/`build`/`eslint` sạch. Playwright dựng lại đúng case 3 nhánh (A 2 con, B 0 con, C 6 con) → 0 cặp chồng lấn (trước đó có), screenshot xác nhận layout gọn gàng. Chạy lại 2 test cũ ở mục 5a (2 nhánh lệch, 2 nhánh đều có con) → vẫn pass, không hồi quy.
+
 ---
 
 ## 6. Việc chưa làm / để dành

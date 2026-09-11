@@ -89,22 +89,29 @@ function subtreeLevelProfile(
 }
 
 /**
- * Khoảng cách tâm–tâm tối thiểu giữa 2 subtree kề nhau (A trước, B sau) để
- * KHÔNG chồng lấn thật sự — chỉ xét các level TRÙNG NHAU giữa 2 profile
- * (xem subtreeLevelProfile), mỗi level trùng dùng đúng gap đã decay của
- * chính level đó.
+ * Tâm tối thiểu (trục xếp, cùng hệ toạ độ với `contour`) để đặt sibling tiếp
+ * theo (profile của nó) mà KHÔNG chồng lấn với BẤT KỲ sibling nào đã đặt
+ * trước đó — không chỉ sibling liền trước.
+ *
+ * `contour`: với mỗi absolute level, độ vươn XA NHẤT (tuyệt đối, đã cộng vị
+ * trí đặt) mà TẤT CẢ sibling đã xếp trước đó đạt tới ở level đó. Bắt buộc
+ * phải là "luỹ kế toàn bộ", không phải chỉ so cặp liền kề: nếu sibling giữa
+ * (VD 1 node rỗng không con) không có gì ở 1 level sâu nào đó, nó không được
+ * phép "làm mất" yêu cầu né nhau giữa sibling trước nó và sibling sau nó ở
+ * level đó — đây chính là bug đã gặp (2 nhánh 2 bên 1 sibling rỗng vẫn chồng
+ * lấn ở tầng cháu, vì trước đây chỉ so profile[i-1] với profile[i]).
  */
-function requiredCenterGap(
-  profileA: Map<number, { before: number; after: number }>,
-  profileB: Map<number, { before: number; after: number }>
+function minCenterAgainstContour(
+  contour: Map<number, number>,
+  profile: Map<number, { before: number; after: number }>
 ): number {
-  let gap = 0;
-  for (const [level, a] of profileA) {
-    const b = profileB.get(level);
-    if (!b) continue;
-    gap = Math.max(gap, a.after + siblingEdgeGap(level) + b.before);
+  let center = -Infinity;
+  for (const [level, p] of profile) {
+    const prevAfter = contour.get(level);
+    if (prevAfter === undefined) continue;
+    center = Math.max(center, prevAfter + siblingEdgeGap(level) + p.before);
   }
-  return gap;
+  return center;
 }
 
 export function branchOffset(
@@ -279,11 +286,22 @@ export function reflowSiblings(
     return (axis === "y" ? h : w) / 2;
   });
 
-  // Tọa độ tâm tạm (trục xếp), origin = 0 cho sibling đầu
+  // Tọa độ tâm tạm (trục xếp), origin = 0 cho sibling đầu. So với CONTOUR
+  // luỹ kế của MỌI sibling đã đặt trước đó (không chỉ sibling liền trước) —
+  // nếu không, 1 sibling rỗng ở giữa sẽ "che mất" yêu cầu né nhau giữa 2
+  // sibling 2 bên nó ở tầng cháu sâu hơn (bug đã gặp: 3 nhánh, nhánh giữa
+  // không con → 2 nhánh có cháu 2 bên chồng lấn lên nhau).
   const centers: number[] = new Array(n);
   centers[0] = 0;
+  const contour = new Map<number, number>();
+  for (const [lvl, p] of profiles[0]) contour.set(lvl, centers[0] + p.after);
   for (let i = 1; i < n; i++) {
-    centers[i] = centers[i - 1] + requiredCenterGap(profiles[i - 1], profiles[i]);
+    const c = minCenterAgainstContour(contour, profiles[i]);
+    centers[i] = Number.isFinite(c) ? c : centers[i - 1];
+    for (const [lvl, p] of profiles[i]) {
+      const abs = centers[i] + p.after;
+      contour.set(lvl, Math.max(contour.get(lvl) ?? -Infinity, abs));
+    }
   }
 
   // Canh giữa cụm theo parent, dựa trên box RIÊNG của sibling đầu/cuối (không
