@@ -42,7 +42,7 @@ export const BRANCH_COLORS: BranchColor[] = [
   "#A855F7",
 ];
 
-export const ROOT_COLOR = "#EAB308" as const;
+export const ROOT_COLOR = "#FACC15" as const;
 
 export const SIDEBAR_W = 224; // bội số 8, gần nhất với 225 cũ
 

@@ -14,7 +14,7 @@ export interface MindNode {
   text: string;
   x: number;
   y: number;
-  color: BranchColor | "#111111";
+  color: BranchColor | "#FACC15";
   parentId: string | null;
   /** Direction from parent to this node */
   direction: Direction | null;
