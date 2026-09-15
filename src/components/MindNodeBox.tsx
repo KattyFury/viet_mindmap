@@ -177,7 +177,7 @@ export function MindNodeBox({
   const colorMode = useMindmapStore((st) => st.colorMode);
   const customColor = useMindmapStore((st) => st.customColor);
   const custom = colorMode === "custom";
-  // Root: bg+border luôn 1 màu (đen mặc định, hoặc customColor ở chế độ custom).
+  // Root: bg+border luôn 1 màu (vàng mặc định, hoặc customColor ở chế độ custom).
   // Child: bg luôn trắng; border = màu nhánh riêng, hoặc customColor ở chế độ custom.
   const rootColor = custom ? customColor : ROOT_COLOR;
   const bg = isRoot ? rootColor : "#FFFFFF";
