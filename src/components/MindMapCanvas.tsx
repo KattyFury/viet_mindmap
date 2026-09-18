@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { STROKE_WIDTH } from "@/lib/constants";
 import { exportMindmapPng } from "@/lib/export-png";
-import { lineEndpoints } from "@/lib/layout";
+import {
+  childrenOf,
+  isRootNode,
+  lineEndpoints,
+  opposite,
+  siblingNeighbor,
+  visibleSubtreeIds,
+} from "@/lib/layout";
+import { downloadMarkdown } from "@/lib/markdown";
 import { useMindmapStore } from "@/store/mindmap-store";
 import type { Direction, MindMapDoc } from "@/lib/types";
 import { ColorModeMenu } from "./ColorModeMenu";
@@ -36,6 +44,7 @@ export function MindMapCanvas() {
   const relocateChildDrag = useMindmapStore((s) => s.relocateChildDrag);
   const deleteSubtree = useMindmapStore((s) => s.deleteSubtree);
   const clearText = useMindmapStore((s) => s.clearText);
+  const toggleCollapse = useMindmapStore((s) => s.toggleCollapse);
   const undo = useMindmapStore((s) => s.undo);
   const redo = useMindmapStore((s) => s.redo);
   const colorMode = useMindmapStore((s) => s.colorMode);
@@ -100,6 +109,54 @@ export function MindMapCanvas() {
     addChild(node.id, dir);
   }, [map, selectedId, addChild]);
 
+  /**
+   * Phím mũi tên: ↑/↓ = sibling trước/sau (cùng parent + hướng). →/← = "sâu
+   * hơn" (vào con đầu tiên) khi trùng hướng nhánh của node, ngược lại = "nông
+   * hơn" (về parent). Root: cả 2 hướng đều là "sâu hơn" (vào con bên đó, vì
+   * root không có parent). Node đang gấp: bấm hướng "sâu hơn" = mở ra trước,
+   * không nhảy chọn luôn (đỡ bất ngờ).
+   */
+  const arrowNavigate = useCallback(
+    (key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight") => {
+      if (!map || !selectedId) return;
+      const node = map.nodes[selectedId];
+      if (!node) return;
+
+      if (key === "ArrowUp" || key === "ArrowDown") {
+        const next = siblingNeighbor(map.nodes, selectedId, key === "ArrowUp" ? -1 : 1);
+        if (next) setSelected(next);
+        return;
+      }
+
+      const root = isRootNode(node);
+      const deeperDir: Direction =
+        node.direction === "left" || node.direction === "right"
+          ? node.direction
+          : key === "ArrowRight"
+            ? "right"
+            : "left";
+      const isDeeper =
+        (deeperDir === "right" && key === "ArrowRight") ||
+        (deeperDir === "left" && key === "ArrowLeft");
+
+      if (isDeeper) {
+        if (node.collapsed) {
+          toggleCollapse(node.id);
+          return;
+        }
+        let kids = childrenOf(map.nodes, node.id, deeperDir);
+        if (kids.length === 0 && root) {
+          kids = childrenOf(map.nodes, node.id, opposite(deeperDir));
+        }
+        if (kids[0]) setSelected(kids[0].id);
+        return;
+      }
+
+      if (node.parentId) setSelected(node.parentId);
+    },
+    [map, selectedId, setSelected, toggleCollapse]
+  );
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -149,6 +206,29 @@ export function MindMapCanvas() {
       if (e.key === "Backspace") {
         e.preventDefault();
         clearText(selectedId);
+        return;
+      }
+
+      if (
+        e.key === "ArrowUp" ||
+        e.key === "ArrowDown" ||
+        e.key === "ArrowLeft" ||
+        e.key === "ArrowRight"
+      ) {
+        e.preventDefault();
+        arrowNavigate(e.key);
+        return;
+      }
+
+      // Space: gấp/mở nhánh của node đang chọn (không có con → không làm gì)
+      if (e.key === " " || e.code === "Space") {
+        const hasChildren = Object.values(map.nodes).some(
+          (n) => n.parentId === selectedId
+        );
+        if (selectedId !== map.rootId && hasChildren) {
+          e.preventDefault();
+          toggleCollapse(selectedId);
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -162,6 +242,8 @@ export function MindMapCanvas() {
     clearText,
     addChild,
     addChildOfSelected,
+    arrowNavigate,
+    toggleCollapse,
   ]);
 
   const onWheel = useCallback((e: React.WheelEvent) => {
@@ -190,7 +272,21 @@ export function MindMapCanvas() {
   // Memo hóa: kéo pan (mousemove) đổi `pan` state liên tục nhưng KHÔNG đụng
   // toạ độ node/line — trước đây recompute cả 2 mảng này (kể cả lineEndpoints
   // của mọi cạnh) trên mỗi mousemove, gây giật khi map nhiều node.
-  const nodes = useMemo(() => (map ? Object.values(map.nodes) : []), [map]);
+  // Lọc luôn theo visibleSubtreeIds: con/cháu của 1 node đang gấp KHÔNG render.
+  const nodes = useMemo(() => {
+    if (!map) return [];
+    const visible = new Set(visibleSubtreeIds(map.nodes, map.rootId));
+    return Object.values(map.nodes).filter((n) => visible.has(n.id));
+  }, [map]);
+  // id nào có con (bất kể đang gấp) — hiện nút gấp/mở trên box.
+  const parentIds = useMemo(() => {
+    const s = new Set<string>();
+    if (!map) return s;
+    for (const n of Object.values(map.nodes)) {
+      if (n.parentId) s.add(n.parentId);
+    }
+    return s;
+  }, [map]);
   const lines = useMemo(
     () =>
       map &&
@@ -224,6 +320,11 @@ export function MindMapCanvas() {
     } finally {
       setExporting(false);
     }
+  }
+
+  function handleDownloadMarkdown() {
+    if (!map) return;
+    downloadMarkdown(map);
   }
 
   function recenter() {
@@ -270,6 +371,16 @@ export function MindMapCanvas() {
           <IconDownload size={18} />
           {exporting ? "Đang xuất…" : "Download"}
         </button>
+        <button
+          type="button"
+          onClick={handleDownloadMarkdown}
+          disabled={!map}
+          title="Xuất mindmap dạng text (.md) — để backup/chia sẻ"
+          className="flex items-center gap-2 rounded-xl border border-[#E9ECEF] bg-white px-3.5 py-2 text-[13px] font-medium text-[#212529] shadow-sm hover:bg-[#F8F9FA] disabled:opacity-50"
+        >
+          <IconDownload size={18} />
+          .md
+        </button>
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center px-4">
@@ -287,6 +398,14 @@ export function MindMapCanvas() {
             |
           </span>
           <span>Delete = xóa nhánh</span>
+          <span className="hidden text-[#DEE2E6] sm:inline" aria-hidden>
+            |
+          </span>
+          <span>Mũi tên = di chuyển chọn</span>
+          <span className="hidden text-[#DEE2E6] sm:inline" aria-hidden>
+            |
+          </span>
+          <span>Space = gấp/mở nhánh</span>
           <span className="hidden text-[#DEE2E6] sm:inline" aria-hidden>
             |
           </span>
@@ -392,6 +511,9 @@ export function MindMapCanvas() {
                         setDraggingId(active ? node.id : null)
                     : undefined
                 }
+                hasChildren={parentIds.has(node.id)}
+                collapsed={node.collapsed}
+                onToggleCollapse={() => toggleCollapse(node.id)}
               />
             ))}
         </div>

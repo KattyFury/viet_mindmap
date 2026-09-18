@@ -23,7 +23,7 @@ import { contrastText } from "@/lib/colors";
 import { opposite } from "@/lib/layout";
 import { useMindmapStore } from "@/store/mindmap-store";
 import type { Direction, MindNode } from "@/lib/types";
-import { IconPlus } from "./icons";
+import { IconChevron, IconPlus } from "./icons";
 
 interface MindNodeBoxProps {
   node: MindNode;
@@ -44,6 +44,11 @@ interface MindNodeBoxProps {
   onRelocate?: (worldX: number, worldY: number) => void;
   /** Báo đang kéo — canvas ẩn line (không để line “mồ côi” vị trí cũ) */
   onDragActiveChange?: (dragging: boolean) => void;
+  /** Node này có con (bất kể đang gấp hay không) — hiện nút gấp/mở */
+  hasChildren?: boolean;
+  /** Đang gấp con (ẩn cả subtree) */
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 /** Chỉ trái / phải — không trên / dưới */
@@ -90,6 +95,9 @@ export function MindNodeBox({
   onDelete,
   onRelocate,
   onDragActiveChange,
+  hasChildren,
+  collapsed,
+  onToggleCollapse,
 }: MindNodeBoxProps) {
   const isRoot = node.parentId === null;
   const s = scale;
@@ -236,6 +244,33 @@ export function MindNodeBox({
           transform: "translateY(-50%)",
         };
     }
+  }
+
+  /**
+   * Nút gấp/mở — nằm cùng cạnh với nút "+" (cạnh hướng con) nhưng lệch lên
+   * góc trên (không phải giữa cạnh) để không đè nút "+" khi node vừa được
+   * chọn vừa có con. Luôn hiện khi có con (không cần chọn node trước).
+   */
+  const collapseSize = 18 * s;
+  function collapseStyle(dir: Direction): CSSProperties {
+    const half = collapseSize / 2;
+    const base: CSSProperties = {
+      position: "absolute",
+      width: collapseSize,
+      height: collapseSize,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 999,
+      background: collapsed ? border : "#fff",
+      color: collapsed ? contrastText(border) : border,
+      border: `${1.5 * s}px solid ${border}`,
+      cursor: "pointer",
+      zIndex: 6,
+      top: 6 * s,
+      boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+    };
+    return dir === "left" ? { ...base, left: -half } : { ...base, right: -half };
   }
 
   function commit(text: string) {
@@ -486,6 +521,29 @@ export function MindNodeBox({
             <IconPlus size={Math.max(12, 14 * s)} />
           </button>
         ))}
+
+      {!isRoot && hasChildren && node.direction && onToggleCollapse && (
+        <button
+          type="button"
+          data-plus
+          title={collapsed ? "Mở nhánh" : "Gấp nhánh"}
+          style={collapseStyle(node.direction)}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleCollapse();
+          }}
+        >
+          <IconChevron
+            size={Math.max(10, 12 * s)}
+            style={{
+              transform: `rotate(${
+                (node.direction === "left") !== Boolean(collapsed) ? 180 : 0
+              }deg)`,
+            }}
+          />
+        </button>
+      )}
     </div>
   );
 }

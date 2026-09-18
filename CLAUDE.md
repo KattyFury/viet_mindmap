@@ -141,8 +141,24 @@ Mọi font size / box size / spacing trong `constants.ts` + `layout.ts` theo **b
 | **Backspace** (không type) | Xóa text node; khi type = xóa ký tự bình thường |
 | **Ctrl/Cmd+Z / Y** | Undo / redo (không khi focus field) |
 | Kéo child | Đổi trái↔phải + reorder sibling; ẩn line khi kéo |
+| **↑ / ↓** | Chọn sibling trước/sau (cùng parent + hướng), theo `siblingOrder` |
+| **→ / ←** | "Sâu hơn" (vào con đầu tiên) nếu trùng hướng nhánh của node đang chọn, ngược lại = "nông hơn" (về parent). Root: cả 2 hướng đều là "sâu hơn" (vào con bên đó). Node đang **gấp**: bấm hướng "sâu hơn" = **mở ra** trước (không nhảy chọn luôn) |
+| **Space** (không type) | Gấp/mở nhánh của node đang chọn (không tác dụng nếu không có con hoặc là root) |
 
-Implement: canvas `addChildOfSelected` + `MindNodeBox` Tab/Delete khi edit.
+Implement: canvas `addChildOfSelected` + `arrowNavigate` + `MindNodeBox` Tab/Delete khi edit.
+
+### Gấp/mở nhánh — collapse/expand (thêm 2026-09-18)
+- `MindNode.collapsed?: boolean` — true = ẩn TẤT CẢ con/cháu (subtree con vẫn còn nguyên trong data, không xóa). **Chỉ áp dụng non-root** — root luôn hiện đủ, không có nút gấp (tránh case 2 hướng trái/phải cần 2 state riêng, chưa cần thiết).
+- Layout: `layout.ts` có `visibleSubtreeIds()` (giống `collectSubtreeIds` nhưng DỪNG xuống con của node `collapsed`) — dùng trong `subtreeLevelProfile` (tính chỗ) và `reflowDescendants` (dừng xuống layout con) để subtree đang ẩn KHÔNG chiếm chỗ trong reflow. `collectSubtreeIds` (bản đầy đủ, không quan tâm collapse) vẫn giữ nguyên — dùng cho `shiftSubtree`/xóa (phải dời/xóa CẢ subtree ẩn theo cha).
+- Canvas: `nodes`/`lines` render filter theo `visibleSubtreeIds(map.nodes, map.rootId)` — con của node đang gấp không render, không tính line.
+- UI: nút tròn nhỏ (chevron) ở góc trên cạnh-hướng-nhánh của box, LUÔN hiện khi node có con (không cần chọn trước) — cố tình lệch vị trí so với nút "+" (giữa cạnh) để không đè nhau khi vừa chọn vừa có con.
+- Không đổi tọa độ/kích thước con khi gấp — chỉ ẩn render + không tính chỗ; mở lại thì vị trí cũ (trước khi gấp) được dùng làm điểm khởi đầu rồi reflow lại bình thường.
+
+### Xuất/nhập text (markdown outline, thêm 2026-09-18)
+- `src/lib/markdown.ts`: `exportMindmapMarkdown(map)` → text (`# root` + bullet `-` thụt lề 2 space/level, right rồi left); `outlineToNodes(text)` → dựng cây node (parser stack-based theo indent, con trực tiếp root xen kẽ phải/trái, cháu kế thừa hướng tổ tiên — đúng ràng buộc sẵn có: non-root chỉ có con CÙNG hướng với chính nó).
+- Newline thủ công (Ctrl+Enter) trong 1 node **KHÔNG round-trip** qua text — export gộp thành khoảng trắng để giữ outline 1-dòng-1-node. Chấp nhận lossy, ưu tiên đơn giản (mục đích chính = backup/chia sẻ nhanh, không phải format lưu trữ chính — localStorage vẫn giữ đầy đủ).
+- Import luôn tạo **map mới** (không merge vào map đang mở) — an toàn, không đè dữ liệu cũ. UI: nút upload cạnh nút "+" ở Sidebar → `ImportDialog.tsx`.
+- Export UI: nút ".md" cạnh nút "Download" (PNG) trên canvas.
 
 ### Before changing text, lines, layout, or shortcuts
 1. Re-read this section.

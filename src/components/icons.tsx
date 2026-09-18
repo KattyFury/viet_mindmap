@@ -68,6 +68,26 @@ export function IconDownload(props: IconProps) {
   );
 }
 
+/** Chevron — dùng cho nút gấp/mở nhánh (xoay theo trạng thái) */
+export function IconChevron(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+/** Upload arrow out of tray — nhập text/outline */
+export function IconUpload(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 15V4" />
+      <path d="M7.5 8.5 12 4l4.5 4.5" />
+      <path d="M5 19.5h14" />
+    </svg>
+  );
+}
+
 /** Small mindmap mark (optional brand) */
 export function IconMindmap(props: IconProps) {
   return (

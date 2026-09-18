@@ -7,7 +7,7 @@ import {
 import { boundsOfNodes } from "./layout";
 import type { MindNode } from "./types";
 
-function slugify(name: string): string {
+export function slugify(name: string): string {
   return (
     name
       .normalize("NFD")

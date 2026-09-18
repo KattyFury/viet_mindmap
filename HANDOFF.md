@@ -1,6 +1,6 @@
 # HANDOFF – VietMindmap
 
-**Cập nhật:** 2026-09-11 · **Local:** `D:\Files\Claude\Personal\vietmindmap`
+**Cập nhật:** 2026-09-18 · **Local:** `D:\Files\Claude\build_for_me\small_tool\viet_mindmap`
 
 ### 🔗 LINK CHÍNH
 
@@ -172,3 +172,18 @@ User gửi ảnh khác (thêm nhánh thứ 3 "Bảo mật phải tốt" — khô
 
 - Auth Google + sync đa máy qua Supabase — hạ tầng có sẵn (schema JSON tree), **chưa gắn** (xem README mục "Auth Google").
 - Chưa có test tự động (không có thư mục test) — verify UI hiện tại là tay/Playwright ad-hoc ngoài repo.
+
+## 7. Phiên 2026-09-18 — mượt hơn (perf) + 3 tính năng mới (collapse, arrow-nav, xuất/nhập text)
+
+User feedback: app "thua xa MindMeister" về cảm giác dùng. Việc chia 2 phần:
+
+**a) Polish hiệu năng/cảm giác (không đổi tính năng):**
+- `MindMapCanvas.tsx`: memo hóa `nodes`/`lines` (useMemo) — trước đây recompute cả 2 mảng (kể cả `lineEndpoints` từng cạnh) trên MỖI mousemove khi kéo canvas, dù pan không đổi toạ độ node/line nào → giật khi map nhiều node.
+- `MindNodeBox.tsx`: transition 160ms cho `left/top/height` khi vị trí đổi do REFLOW ở chỗ khác trong cây (không còn "nhảy" tức thì). Tắt hẳn khi đang kéo/đang gõ/đang zoom (dùng state so sánh scale render trước — không dùng ref-trong-render vì lint chặn, xem code).
+
+**b) 3 tính năng mới — xem chi tiết ở `CLAUDE.md` §5 (rule khóa, đã cập nhật):**
+- **Gấp/mở nhánh (collapse/expand):** field mới `MindNode.collapsed?`, chỉ non-root. Layout-aware qua `visibleSubtreeIds()` trong `layout.ts` (subtree ẩn không chiếm chỗ reflow). Nút tròn nhỏ trên box (luôn hiện khi có con) + phím **Space**.
+- **Điều hướng phím mũi tên** giữa các node đã chọn: ↑/↓ = sibling, →/← = sâu hơn/nông hơn theo hướng nhánh (xem bảng phím tắt trong CLAUDE.md).
+- **Xuất/nhập text (markdown outline):** `src/lib/markdown.ts`. Nút ".md" cạnh Download (PNG) = xuất; nút upload cạnh "+" ở Sidebar = mở `ImportDialog.tsx` (dán outline → tạo map MỚI, không merge). Lossy ở newline thủ công trong node (gộp thành space) — chấp nhận, ưu tiên đơn giản.
+
+Verify: `tsc --noEmit` + `eslint` (baseline lỗi/warning y hệt trước khi sửa — không phát sinh thêm) + `next build` đều sạch. Đã tự viết script sanity tạm (`scripts/_sanity.ts`, xóa sau khi chạy — không commit) để test `outlineToNodes`/`exportMindmapMarkdown`/`visibleSubtreeIds`: parse đúng số node, đúng level, đúng hướng kế thừa, không trùng toạ độ sau reflow, round-trip export→import giữ nguyên số node, gấp nhánh đúng ẩn/hiện. **Chưa test tay qua browser thật** (môi trường không có sẵn browser automation) — nên tự tay thử qua web trước khi tin tưởng hoàn toàn, đặc biệt: nút gấp có đè lên nút "+" ở box nhỏ/zoom sâu không, phím mũi tên có xung đột gì với thao tác khác không.

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { IconClose, IconPlus } from "./icons";
+import { ImportDialog } from "./ImportDialog";
+import { IconClose, IconPlus, IconUpload } from "./icons";
 import { useMindmapStore } from "@/store/mindmap-store";
 import { BRANCH_COLORS, SIDEBAR_W } from "@/lib/constants";
 
@@ -16,12 +17,14 @@ export function Sidebar({ email: _email, name: _name, authEnabled: _authEnabled 
   const maps = useMindmapStore((s) => s.maps);
   const activeMapId = useMindmapStore((s) => s.activeMapId);
   const createMap = useMindmapStore((s) => s.createMap);
+  const importMarkdown = useMindmapStore((s) => s.importMarkdown);
   const selectMap = useMindmapStore((s) => s.selectMap);
   const deleteMap = useMindmapStore((s) => s.deleteMap);
   const reorderMaps = useMindmapStore((s) => s.reorderMaps);
 
   const [dragId, setDragId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const sorted = [...maps].sort((a, b) => a.order - b.order);
 
@@ -85,16 +88,36 @@ export function Sidebar({ email: _email, name: _name, authEnabled: _authEnabled 
           })}
         </ul>
 
-        <button
-          type="button"
-          onClick={() => createMap()}
-          aria-label="Tạo mindmap mới"
-          title="Tạo mindmap mới"
-          className="mt-2 flex w-full items-center justify-center rounded-xl bg-[#111] py-2.5 text-white hover:bg-[#222]"
-        >
-          <IconPlus size={18} />
-        </button>
+        <div className="mt-2 flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => createMap()}
+            aria-label="Tạo mindmap mới"
+            title="Tạo mindmap mới"
+            className="flex flex-1 items-center justify-center rounded-xl bg-[#111] py-2.5 text-white hover:bg-[#222]"
+          >
+            <IconPlus size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            aria-label="Nhập từ text"
+            title="Nhập từ text (outline/markdown)"
+            className="flex items-center justify-center rounded-xl border border-[#E9ECEF] bg-white px-3 text-[#495057] hover:bg-[#F8F9FA]"
+          >
+            <IconUpload size={18} />
+          </button>
+        </div>
       </div>
+
+      <ImportDialog
+        open={importOpen}
+        onCancel={() => setImportOpen(false)}
+        onImport={(text) => {
+          importMarkdown(text);
+          setImportOpen(false);
+        }}
+      />
 
       <ConfirmDialog
         open={!!confirmDeleteId}

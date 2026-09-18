@@ -12,6 +12,7 @@ import {
   reflowAll,
   relocateChild,
 } from "@/lib/layout";
+import { outlineToNodes } from "@/lib/markdown";
 import { loadState, saveState } from "@/lib/storage";
 import type { Direction, MindMapDoc, MindNode } from "@/lib/types";
 
@@ -42,6 +43,8 @@ interface MindmapState {
   clearPendingEdit: () => void;
 
   createMap: () => void;
+  /** Tạo mindmap mới từ text dạng outline (markdown list thụt lề) — xem src/lib/markdown.ts */
+  importMarkdown: (text: string) => void;
   selectMap: (id: string) => void;
   reorderMaps: (fromIndex: number, toIndex: number) => void;
   deleteMap: (id: string) => void;
@@ -53,6 +56,8 @@ interface MindmapState {
   relocateChildDrag: (id: string, worldX: number, worldY: number) => void;
   deleteSubtree: (id: string) => void;
   clearText: (id: string) => void;
+  /** Gấp/mở con của node (không áp dụng cho root, không tác dụng nếu không có con) */
+  toggleCollapse: (id: string) => void;
 
   undo: () => void;
   redo: () => void;
@@ -222,6 +227,27 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
     persist(get);
   },
 
+  importMarkdown: (text) => {
+    const { nodes, rootId } = outlineToNodes(text);
+    pushHistory(set, get);
+    const maps = get().maps;
+    const map: MindMapDoc = {
+      id: uid("map"),
+      name: nodes[rootId]?.text.trim() ?? "",
+      nodes,
+      rootId,
+      order: maps.length,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    set({
+      maps: [...maps, map],
+      activeMapId: map.id,
+      selectedId: map.rootId,
+    });
+    persist(get);
+  },
+
   selectMap: (id) => {
     const map = get().maps.find((m) => m.id === id);
     if (!map) return;
@@ -340,6 +366,29 @@ export const useMindmapStore = create<MindmapState>((set, get) => ({
     if (!map || !map.nodes[id]) return;
     pushHistory(set, get);
     get().updateText(id, "", defaultBoxHeight());
+  },
+
+  toggleCollapse: (id) => {
+    const map = get().getActiveMap();
+    if (!map || !map.nodes[id] || id === map.rootId) return;
+    const hasChildren = Object.values(map.nodes).some((n) => n.parentId === id);
+    if (!hasChildren) return;
+    pushHistory(set, get);
+    const nodes = reflowAll(
+      {
+        ...map.nodes,
+        [id]: { ...map.nodes[id], collapsed: !map.nodes[id].collapsed },
+      },
+      map.rootId
+    );
+    set({
+      maps: updateActiveMap(get().maps, get().activeMapId, (m) => ({
+        ...m,
+        nodes,
+        updatedAt: Date.now(),
+      })),
+    });
+    persist(get);
   },
 
   undo: () => {

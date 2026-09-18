@@ -29,6 +29,12 @@ export interface MindNode {
    * dung, không giới hạn số dòng. undefined → dùng default (defaultBoxHeight).
    */
   h?: number;
+  /**
+   * Gấp nhánh: true = ẩn TẤT CẢ con (và cháu) của node này. Chỉ áp dụng cho
+   * non-root (root luôn hiện đủ, không có nút gấp). Con vẫn còn trong data
+   * (không xóa) — chỉ ẩn khỏi canvas + không tính chỗ trong layout.
+   */
+  collapsed?: boolean;
 }
 
 export interface MindMapDoc {

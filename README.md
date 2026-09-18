@@ -2,7 +2,7 @@
 
 Mindmap chuẩn từng khoảng cách — tối ưu tiếng Việt.
 
-**Folder:** `D:\Files\Claude\build_for_me\vietmindmap`
+**Folder:** `D:\Files\Claude\build_for_me\small_tool\viet_mindmap`
 **Handoff:** xem `HANDOFF.md` (trạng thái cuối) + `CLAUDE.md` §5 (rule khóa)
 **Slogan / brand:** VietMindmap · Local-first (Google auth optional)
 
@@ -27,7 +27,7 @@ Double-click icon **`VietMindmap`** trên Desktop.
 Nếu mất shortcut, tạo lại:
 
 ```powershell
-cd D:\Files\Claude\build_for_me\vietmindmap
+cd D:\Files\Claude\build_for_me\small_tool\viet_mindmap
 powershell -ExecutionPolicy Bypass -File .\scripts\install-desktop-shortcut.ps1
 ```
 
@@ -39,7 +39,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-desktop-shortcut.ps1
 
 ### Hoặc tay
 ```powershell
-cd D:\Files\Claude\build_for_me\vietmindmap
+cd D:\Files\Claude\build_for_me\small_tool\viet_mindmap
 npm run dev
 ```
 Mở http://localhost:3000

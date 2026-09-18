@@ -71,7 +71,9 @@ function subtreeLevelProfile(
 ): Map<number, { before: number; after: number }> {
   const root = nodes[rootId];
   const profile = new Map<number, { before: number; after: number }>();
-  for (const id of collectSubtreeIds(nodes, rootId)) {
+  // Subtree đang gấp (collapsed) → chỉ tính chỗ cho box của chính nó, KHÔNG
+  // tính con/cháu đang ẩn (dùng visibleSubtreeIds, không phải collectSubtreeIds).
+  for (const id of visibleSubtreeIds(nodes, rootId)) {
     const n = nodes[id];
     const { w, h } = nodeBoxSize(n);
     const half = axis === "y" ? h / 2 : w / 2;
@@ -172,6 +174,24 @@ export function childrenOf(
     });
 }
 
+/**
+ * Sibling kế trước/sau (cùng parent + hướng), theo `siblingOrder` — dùng cho
+ * điều hướng phím mũi tên lên/xuống. null nếu ở đầu/cuối danh sách hoặc
+ * node không có parent (root).
+ */
+export function siblingNeighbor(
+  nodes: Record<string, MindNode>,
+  id: string,
+  delta: 1 | -1
+): string | null {
+  const node = nodes[id];
+  if (!node?.parentId || !node.direction) return null;
+  const sibs = childrenOf(nodes, node.parentId, node.direction);
+  const i = sibs.findIndex((s) => s.id === id);
+  if (i === -1) return null;
+  return sibs[i + delta]?.id ?? null;
+}
+
 /** Toàn bộ id trong subtree (gồm root). */
 export function collectSubtreeIds(
   nodes: Record<string, MindNode>,
@@ -185,6 +205,32 @@ export function collectSubtreeIds(
     if (seen.has(cur) || !nodes[cur]) continue;
     seen.add(cur);
     out.push(cur);
+    for (const n of Object.values(nodes)) {
+      if (n.parentId === cur) stack.push(n.id);
+    }
+  }
+  return out;
+}
+
+/**
+ * Giống `collectSubtreeIds` nhưng DỪNG xuống con của 1 node đang `collapsed`
+ * (vẫn gồm chính node đó, chỉ không xuống con/cháu nó). Dùng cho layout (tính
+ * chỗ) và canvas (chọn node để render) — subtree đang ẩn thì không cần tính
+ * chỗ cho nó, và không được phép chọn/hiện.
+ */
+export function visibleSubtreeIds(
+  nodes: Record<string, MindNode>,
+  rootId: string
+): string[] {
+  const out: string[] = [];
+  const stack = [rootId];
+  const seen = new Set<string>();
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (seen.has(cur) || !nodes[cur]) continue;
+    seen.add(cur);
+    out.push(cur);
+    if (nodes[cur].collapsed) continue;
     for (const n of Object.values(nodes)) {
       if (n.parentId === cur) stack.push(n.id);
     }
@@ -399,6 +445,9 @@ function reflowDescendants(
   rootId: string
 ): Record<string, MindNode> {
   let next = nodes;
+  // Đang gấp: không xuống layout con/cháu (đang ẩn, không cần xếp chỗ).
+  // Vị trí cũ của chúng vẫn được `shiftSubtree` dời theo khi node này dời chỗ.
+  if (next[rootId]?.collapsed) return next;
   for (const dir of BRANCH_DIRECTIONS) {
     const kids = childrenOf(next, rootId, dir);
     if (kids.length === 0) continue;
