@@ -120,6 +120,10 @@ export function MindNodeBox({
     originY: number;
     moved: boolean;
   } | null>(null);
+  /** Scale render trước đó — để tắt transition trong lúc zoom (không "đuổi theo" chuột). */
+  const [prevScale, setPrevScale] = useState(s);
+  const scaleChanged = prevScale !== s;
+  if (scaleChanged) setPrevScale(s);
 
   useEffect(() => {
     if (!editing) setDraft(node.text);
@@ -287,6 +291,14 @@ export function MindNodeBox({
     .filter(Boolean)
     .join(", ");
 
+  /**
+   * Trượt mượt khi vị trí/chiều cao đổi do REFLOW cây (gõ chữ / thêm-xóa
+   * nhánh ở chỗ khác) — thay vì "nhảy" tức thì. Tắt hẳn khi đang kéo, đang
+   * gõ (live-grow phải tức thì), hoặc đang zoom (không thì box "đuổi theo"
+   * chuột trễ, lệch tâm zoom).
+   */
+  const noAnim = Boolean(dragPreview) || editing || scaleChanged;
+
   return (
     <div
       data-node-id={node.id}
@@ -296,6 +308,9 @@ export function MindNodeBox({
         height: h,
         left,
         top,
+        transition: noAnim
+          ? "none"
+          : "left 160ms ease, top 160ms ease, height 160ms ease",
         zIndex: selected || dragPreview ? 10 : 1,
         overflow: "visible",
         cursor: isRoot ? "default" : dragPreview ? "grabbing" : "grab",

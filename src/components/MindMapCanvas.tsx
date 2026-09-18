@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { STROKE_WIDTH } from "@/lib/constants";
 import { exportMindmapPng } from "@/lib/export-png";
 import { lineEndpoints } from "@/lib/layout";
@@ -187,24 +187,33 @@ export function MindMapCanvas() {
     });
   }, []);
 
-  const nodes = map ? Object.values(map.nodes) : [];
-  const lines =
-    map &&
-    nodes
-      .filter((n) => {
-        if (!n.parentId || !map.nodes[n.parentId]) return false;
-        // Ẩn line gắn node đang kéo (vào node / ra từ node) — không treo vị trí cũ
-        if (draggingId && (n.id === draggingId || n.parentId === draggingId)) {
-          return false;
-        }
-        return true;
-      })
-      .map((n) => {
-        const parent = map.nodes[n.parentId!];
-        const ep = lineEndpoints(parent, n, scale, map.nodes);
-        const color = colorMode === "custom" ? customColor : n.color;
-        return { id: n.id, color, ...ep };
-      });
+  // Memo hóa: kéo pan (mousemove) đổi `pan` state liên tục nhưng KHÔNG đụng
+  // toạ độ node/line — trước đây recompute cả 2 mảng này (kể cả lineEndpoints
+  // của mọi cạnh) trên mỗi mousemove, gây giật khi map nhiều node.
+  const nodes = useMemo(() => (map ? Object.values(map.nodes) : []), [map]);
+  const lines = useMemo(
+    () =>
+      map &&
+      nodes
+        .filter((n) => {
+          if (!n.parentId || !map.nodes[n.parentId]) return false;
+          // Ẩn line gắn node đang kéo (vào node / ra từ node) — không treo vị trí cũ
+          if (
+            draggingId &&
+            (n.id === draggingId || n.parentId === draggingId)
+          ) {
+            return false;
+          }
+          return true;
+        })
+        .map((n) => {
+          const parent = map.nodes[n.parentId!];
+          const ep = lineEndpoints(parent, n, scale, map.nodes);
+          const color = colorMode === "custom" ? customColor : n.color;
+          return { id: n.id, color, ...ep };
+        }),
+    [map, nodes, draggingId, scale, colorMode, customColor]
+  );
 
   async function handleDownload() {
     if (!worldRef.current || !map) return;
