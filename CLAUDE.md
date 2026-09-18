@@ -109,9 +109,10 @@ Mọi font size / box size / spacing trong `constants.ts` + `layout.ts` theo **b
 - Kéo-thả để REORDER map trong list vẫn giữ nguyên (chỉ đổi cách XÓA, không đụng reorder).
 
 ### Lines (`src/lib/layout.ts` → `lineEndpoints`)
-- **Nối TÂM box → TÂM box (sửa 2026-09-18, thay bản "dig vào mép" cũ).** `lineEndpoints()` trả thẳng `{x1:parent.x, y1:parent.y, x2:child.x, y2:child.y}` — không còn tính mép/dig gì cả. Lines render **under** boxes (z-index thấp hơn) nên đoạn nằm trong box tự bị box (nền đặc) che khuất — nhìn vẫn như "cắm vào cạnh", chỉ khác điểm neo toán học.
+- **Mother: tâm ra ĐÚNG mép ngoài. Child: tâm ra CHỈ NỬA mép ngoài (chW/2) — cắm nông hơn (chốt 2026-09-18, sau vài lần sửa sai — xem lịch sử bên dưới).** `lineEndpoints()`: `x1 = parent.x ± phW` (đúng mép mother), `y1 = parent.y`; `x2 = child.x ∓ chW/2` (chỉ NỬA đường ra mép child, không chạm mép thật), `y2 = child.y`. Cả 2 Y đều = tâm dọc của box (trung điểm cạnh trái/phải).
+  - ⚠️ Lịch sử sửa sai trong CÙNG phiên (đừng lặp lại nếu sửa tiếp — đọc kỹ trước khi đổi): (1) thử tâm→tâm tuyệt đối → user: sai. (2) hỏi lại nhiều phương án dig phức tạp → user: "không cần tính mép/dig đâu, cứ cắm vào giữa biên của mép là được" → làm mother=mép, child=mép (không dig). (3) user sửa tiếp: "Line đi từ tâm mother ra 1/2 mép ngoài child, line từ child cũng từ tâm ra 1/2 mép ngoài child nhỏ hơn" → hiểu là mother đi ĐỦ ra mép (không giảm), CHILD chỉ đi NỬA quãng đường ra mép (chW/2, không phải mép thật) → bản chốt hiện tại.
 - **Only LEFT / RIGHT branches** — no up/down create (UI + addChild).
-- Straight lines (not L-paths): tâm parent → tâm child, 1 đoạn thẳng.
+- Straight lines (not L-paths): mép parent → nửa-mép child, 1 đoạn thẳng.
 - While dragging a child, **hide** its line (do not leave line at old position).
 - Drag relocate only chooses left vs right.
 

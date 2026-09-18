@@ -487,7 +487,21 @@ export function lineEndpoints(
   parent: MindNode,
   child: MindNode
 ): { x1: number; y1: number; x2: number; y2: number } {
-  return { x1: parent.x, y1: parent.y, x2: child.x, y2: child.y };
+  // up/down đã tắt UI — map cũ: treat như left/right theo vị trí
+  let dir = child.direction ?? "right";
+  if (dir === "up" || dir === "down") {
+    dir = child.x >= parent.x ? "right" : "left";
+  }
+
+  const phW = nodeBoxSize(parent).w / 2;
+  const chW = nodeBoxSize(child).w / 2;
+
+  // Mother: tâm ra ĐÚNG mép ngoài (phW). Child: tâm ra CHỈ NỬA mép ngoài
+  // (chW/2) — dừng sớm hơn, "cắm nông" vào child thay vì chạm đúng mép.
+  if (dir === "left") {
+    return { x1: parent.x - phW, y1: parent.y, x2: child.x + chW / 2, y2: child.y };
+  }
+  return { x1: parent.x + phW, y1: parent.y, x2: child.x - chW / 2, y2: child.y };
 }
 
 export function boundsOfNodes(nodes: MindNode[]): {
