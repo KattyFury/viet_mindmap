@@ -12,8 +12,6 @@ export const EDGE_GAP_VERTICAL = 144; // bội số 8, gần nhất với 140 c�
 /** Hở mép giữa 2 sibling / 2 subtree kề nhau (cộng thêm vào size khi xếp) */
 export const SIBLING_EDGE_GAP = 32; // bội số 8, gần nhất với 36 cũ
 
-/** Dig tối thiểu trên màn hình (px) — zoom nhỏ vẫn dính */
-const MIN_SCREEN_DIG = 3;
 
 export function isRootNode(node: MindNode): boolean {
   return node.parentId === null || node.level === 0;
@@ -481,46 +479,15 @@ export function placeNewChild(
 }
 
 /**
- * Line thẳng (không chữ L).
- * Chỉ còn trái/phải — neo giữa mép parent → giữa cạnh gần child + dig.
+ * Line thẳng (không chữ L) — nối TÂM box mother/child (không phải biên).
+ * Đoạn nằm trong box tự bị box (z-index cao hơn, nền đặc) che khuất, nên
+ * hiệu ứng nhìn vẫn là "cắm vào cạnh", chỉ khác điểm neo TOÁN HỌC là tâm.
  */
 export function lineEndpoints(
   parent: MindNode,
-  child: MindNode,
-  viewScale = 1,
-  _nodes?: Record<string, MindNode>
+  child: MindNode
 ): { x1: number; y1: number; x2: number; y2: number } {
-  // up/down đã tắt UI — map cũ: treat như left/right theo vị trí
-  let dir = child.direction ?? "right";
-  if (dir === "up" || dir === "down") {
-    dir = child.x >= parent.x ? "right" : "left";
-  }
-
-  const p = nodeBoxSize(parent);
-  const c = nodeBoxSize(child);
-  const phW = p.w / 2;
-  const chW = c.w / 2;
-  const s = Math.max(viewScale, 0.01);
-
-  const dig = Math.min(
-    Math.max(3, MIN_SCREEN_DIG / s),
-    Math.min(phW, chW) * 0.25
-  );
-
-  if (dir === "left") {
-    return {
-      x1: parent.x - phW + dig,
-      y1: parent.y,
-      x2: child.x + chW - dig,
-      y2: child.y,
-    };
-  }
-  return {
-    x1: parent.x + phW - dig,
-    y1: parent.y,
-    x2: child.x - chW + dig,
-    y2: child.y,
-  };
+  return { x1: parent.x, y1: parent.y, x2: child.x, y2: child.y };
 }
 
 export function boundsOfNodes(nodes: MindNode[]): {

@@ -304,11 +304,15 @@ export function MindMapCanvas() {
         })
         .map((n) => {
           const parent = map.nodes[n.parentId!];
-          const ep = lineEndpoints(parent, n, scale, map.nodes);
+          const ep = lineEndpoints(parent, n);
           const color = colorMode === "custom" ? customColor : n.color;
           return { id: n.id, color, ...ep };
         }),
-    [map, nodes, draggingId, scale, colorMode, customColor]
+    // scale KHÔNG cần trong deps: lineEndpoints() trả toạ độ world (tâm box),
+    // *scale chỉ nhân lúc render JSX (đọc trực tiếp closure) — thêm scale vào
+    // đây sẽ recompute cả mảng lines mỗi tick zoom, vô ích (giống lỗi nodes/
+    // lines đã fix lúc pan trước đó trong phiên này).
+    [map, nodes, draggingId, colorMode, customColor]
   );
 
   async function handleDownload() {

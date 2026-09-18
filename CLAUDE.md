@@ -109,16 +109,9 @@ Mọi font size / box size / spacing trong `constants.ts` + `layout.ts` theo **b
 - Kéo-thả để REORDER map trong list vẫn giữ nguyên (chỉ đổi cách XÓA, không đụng reorder).
 
 ### Lines (`src/lib/layout.ts` → `lineEndpoints`)
-- Lines render **under** boxes; both ends dig **into** the box.
-- Same direction → **one fixed anchor** on the parent edge (mid-right for right branches, etc.).
-- Box corners:
-  ```
-  A ---- B
-  |      |
-  C ---- D
-  ```
+- **Nối TÂM box → TÂM box (sửa 2026-09-18, thay bản "dig vào mép" cũ).** `lineEndpoints()` trả thẳng `{x1:parent.x, y1:parent.y, x2:child.x, y2:child.y}` — không còn tính mép/dig gì cả. Lines render **under** boxes (z-index thấp hơn) nên đoạn nằm trong box tự bị box (nền đặc) che khuất — nhìn vẫn như "cắm vào cạnh", chỉ khác điểm neo toán học.
 - **Only LEFT / RIGHT branches** — no up/down create (UI + addChild).
-- Straight lines (not L-paths): parent mid-edge → child near-edge mid + dig.
+- Straight lines (not L-paths): tâm parent → tâm child, 1 đoạn thẳng.
 - While dragging a child, **hide** its line (do not leave line at old position).
 - Drag relocate only chooses left vs right.
 
