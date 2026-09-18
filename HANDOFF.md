@@ -187,3 +187,18 @@ User feedback: app "thua xa MindMeister" về cảm giác dùng. Việc chia 2 p
 - **Xuất/nhập text (markdown outline):** `src/lib/markdown.ts`. Nút ".md" cạnh Download (PNG) = xuất; nút upload cạnh "+" ở Sidebar = mở `ImportDialog.tsx` (dán outline → tạo map MỚI, không merge). Lossy ở newline thủ công trong node (gộp thành space) — chấp nhận, ưu tiên đơn giản.
 
 Verify: `tsc --noEmit` + `eslint` (baseline lỗi/warning y hệt trước khi sửa — không phát sinh thêm) + `next build` đều sạch. Đã tự viết script sanity tạm (`scripts/_sanity.ts`, xóa sau khi chạy — không commit) để test `outlineToNodes`/`exportMindmapMarkdown`/`visibleSubtreeIds`: parse đúng số node, đúng level, đúng hướng kế thừa, không trùng toạ độ sau reflow, round-trip export→import giữ nguyên số node, gấp nhánh đúng ẩn/hiện. **Chưa test tay qua browser thật** (môi trường không có sẵn browser automation) — nên tự tay thử qua web trước khi tin tưởng hoàn toàn, đặc biệt: nút gấp có đè lên nút "+" ở box nhỏ/zoom sâu không, phím mũi tên có xung đột gì với thao tác khác không.
+
+**c) Cùng phiên, sau khi user gửi ảnh chê spacing "vẫn ngu" — VIẾT LẠI TOÀN BỘ thuật toán sibling-spacing:**
+
+User chỉ thẳng ảnh chụp: 3 sibling cùng cấp (0 con / 6 con / 1 con) bị lệch nặng, đòi hỏi cụ thể "child 1 nằm ở 1, child 2 (to) nằm ở 0, child 3 nằm ở -1" (đối xứng quanh mother) và yêu cầu **fork thuật toán của 1 lib mindmap thật đã được kiểm chứng** thay vì tự nghĩ tiếp. Đã tìm + đọc `wanglin2/mind-map` (simple-mind-map, MIT, 12k★) — `src/layouts/MindMap.js` (3 hàm `computedBaseValue`/`computedTopValue`/`adjustTopValue`) và `SSShooter/mind-elixir-core` (dùng CSS/DOM flow, không có coordinate algorithm để fork — không dùng được vì kiến trúc canvas hoàn toàn khác VietMindmap).
+
+Đã **thay hẳn** `subtreeLevelProfile`/`minCenterAgainstContour`/`reflowSiblings`/`reflowDescendants` (thuật toán "contour luỹ kế" cũ, chốt 2026-09-11) bằng bản fork 3-bước — chi tiết đầy đủ đã ghi vào `CLAUDE.md` §5 (đọc ở đó, không lặp lại ở đây). Điểm mấu chốt: thuật toán MỚI chỉ đẩy hàng xóm ra xa khi NODE ĐÓ THẬT SỰ quá tải (không dồn tích luỹ một chiều như bản cũ) → sibling nhỏ đứng cạnh sibling to không còn bị kéo lệch vô lý.
+
+Verify kỹ hơn bình thường (đây là thay đổi CORE, đụng đúng chỗ đã có lịch sử bug nhiều nhất — xem mục 5 phía trên): viết script sanity riêng (đã xóa, không commit) với:
+- Đúng kịch bản trong ảnh user (0/6/1 con) → xác nhận numeric: child2 (to) nằm ĐÚNG tâm mother, child1/child3 cách đều 2 bên (272.6 mỗi bên, sai số 0).
+- Lại đúng kịch bản bug lịch sử mục 5 (3 sibling, giữa rỗng, 2 bên có cháu) → vẫn 0 overlap.
+- **50 cây ngẫu nhiên** (30 node/cây, có gấp/mở nhánh ngẫu nhiên xen kẽ) → check AABB pairwise overlap trên `visibleSubtreeIds` (đúng những gì canvas thật render) → **0 overlap cả 50 trial**.
+- Root giữ nguyên vị trí sau reflow (không bị dịch).
+- Gấp nhánh làm sibling xích gần lại hơn thật (348.8px → 82.0px trong test case cụ thể) và không chồng lấn.
+
+`tsc --noEmit` / `eslint` (baseline y hệt, có sửa 1 warning unused-var phát sinh giữa chừng khi refactor rồi tự dọn) / `next build` đều sạch. **Vẫn chưa test tay qua browser thật** — verify trên chỉ dựa vào toạ độ số + AABB overlap check, KHÔNG phải xem bằng mắt trên web. Việc tiếp theo nên làm: mở web thật, tạo lại đúng cây 3 nhánh (0/6/1 con) như ảnh gốc, xác nhận bằng mắt là đẹp/cân đối như mong đợi.
