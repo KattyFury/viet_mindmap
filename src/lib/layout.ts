@@ -493,15 +493,14 @@ export function lineEndpoints(
     dir = child.x >= parent.x ? "right" : "left";
   }
 
-  const phW = nodeBoxSize(parent).w / 2;
   const chW = nodeBoxSize(child).w / 2;
 
-  // Mother: tâm ra ĐÚNG mép ngoài (phW). Child: tâm ra CHỈ NỬA mép ngoài
-  // (chW/2) — dừng sớm hơn, "cắm nông" vào child thay vì chạm đúng mép.
+  // Line xuất phát từ TÂM mother (parent.x/y nguyên, không lùi ra mép), kết
+  // thúc ở BIÊN child (đúng mép ngoài chW) — không phải ngược lại.
   if (dir === "left") {
-    return { x1: parent.x - phW, y1: parent.y, x2: child.x + chW / 2, y2: child.y };
+    return { x1: parent.x, y1: parent.y, x2: child.x + chW, y2: child.y };
   }
-  return { x1: parent.x + phW, y1: parent.y, x2: child.x - chW / 2, y2: child.y };
+  return { x1: parent.x, y1: parent.y, x2: child.x - chW, y2: child.y };
 }
 
 export function boundsOfNodes(nodes: MindNode[]): {
