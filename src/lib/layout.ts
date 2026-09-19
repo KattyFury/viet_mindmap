@@ -196,22 +196,6 @@ export function subtreeBounds(
   return { minX, minY, maxX, maxY };
 }
 
-/** Dời cả subtree (giữ cấu trúc tương đối). */
-export function shiftSubtree(
-  nodes: Record<string, MindNode>,
-  rootId: string,
-  dx: number,
-  dy: number
-): Record<string, MindNode> {
-  if (dx === 0 && dy === 0) return nodes;
-  const next = { ...nodes };
-  for (const id of collectSubtreeIds(nodes, rootId)) {
-    const n = next[id];
-    next[id] = { ...n, x: n.x + dx, y: n.y + dy };
-  }
-  return next;
-}
-
 function findRootId(nodes: Record<string, MindNode>): string | null {
   for (const n of Object.values(nodes)) {
     if (n.parentId === null) return n.id;
@@ -220,45 +204,47 @@ function findRootId(nodes: Record<string, MindNode>): string | null {
 }
 
 /**
- * Reflow — fork thuật toán mindmap layout của simple-mind-map
- * (wanglin2/mind-map, MIT, `src/layouts/MindMap.js` — computedBaseValue /
- * computedTopValue / adjustTopValue), viết lại cho model toạ độ world x/y
- * (record bất biến) thay vì đo DOM. Thay hẳn cách tiếp cận "contour" cũ (so
- * độ vươn TOÀN subtree, gây lệch nặng khi 1 sibling to đứng cạnh sibling nhỏ
- * — xem CLAUDE.md §5 / feedback 2026-09-18).
+ * Reflow — xếp lại toàn bộ cây theo kiểu mindmap chuẩn (Reingold–Tilford rút
+ * gọn cho stacking dọc thuần tuý). Thay cho cách cũ dùng "chiều cao riêng +
+ * đẩy bù overflow sau" (gây lệch tâm cha: chỉ đẩy được 1 phía, phía kia đứng
+ * yên — xem feedback 2026-09-19 "2 child lệch tâm mother"), và cho cách trước
+ * nữa dùng "contour" toàn subtree (gây lệch khi 1 sibling to đứng cạnh
+ * sibling nhỏ — CLAUDE.md §5 / feedback 2026-09-18).
  *
- * 3 bước:
- * 1. `computeAreaHeights` (bottom-up): với mỗi node, tổng chiều cao "vùng con"
- *    mỗi hướng = tổng chiều cao RIÊNG (không tính cháu) của các con trực tiếp
- *    + gap giữa chúng.
- * 2. `positionChildrenNaive` (top-down): xếp con quanh tâm Y của cha, dùng
- *    ĐÚNG areaHeight ở bước 1 (chỉ biết con trực tiếp, chưa biết cháu) — cho
- *    ra vị trí "ngây thơ" đối xứng quanh cha, giống hệt cách người dùng kỳ
- *    vọng (VD 3 con: 1 trên tâm cha, 1 tại tâm, 1 dưới tâm — không lệch).
- * 3. `fixOverflow` (top-down): với mỗi node, nếu vùng con nó cần (bước 1)
- *    RỘNG hơn "chỗ" nó có giữa các anh em của chính nó (tức box riêng + gap),
- *    đẩy CÁC ANH EM của nó ra xa thêm (nửa phần dư mỗi bên: anh trước lùi
- *    lên, em sau lùi xuống) — rồi lan truyền tiếp lên đúng 1 nấc (đẩy anh em
- *    của CHA nó bằng đúng lượng đó). Đây là điểm khác biệt cốt lõi so với
- *    thuật toán cũ: CHỈ node nào thực sự "quá tải" mới kéo hàng xóm ra xa —
- *    KHÔNG dồn tích luỹ một chiều qua toàn bộ chuỗi sibling.
+ * 2 bước, không cần bước "đẩy hàng xóm" bù trừ vì size đã cộng dồn ĐÚNG từ
+ * bước 1 nên 2 bước dưới không bao giờ chồng lấn:
+ * 1. `computeSubtreeSizes` (bottom-up, post-order): với mỗi node, size =
+ *    chiều cao dọc mà CẢ SUBTREE của nó cần chiếm mỗi hướng = tổng size các
+ *    con trực tiếp (đệ quy, không phải chiều cao box riêng của con) + gap
+ *    giữa chúng. 1 nhánh sâu/nhiều con tự cộng dồn lên tận gốc.
+ * 2. `positionChildren` (top-down): xếp con quanh tâm Y của cha, mỗi con
+ *    chiếm đúng 1 "lát" cao = size của nó (bước 1) và được đặt ở ĐÚNG TÂM lát
+ *    đó — nên cha luôn nằm giữa mép trên/dưới của các con, bất kể con nào có
+ *    subtree to hơn con khác.
  */
 
-type AreaMap = Map<string, { left: number; right: number }>;
+type SizeMap = Map<string, { left: number; right: number; own: number }>;
 
 /** BRANCH_DIRECTIONS chỉ chứa "left"/"right" nhưng khai báo kiểu Direction
- *  (rộng hơn, còn "up"/"down" legacy) — helper này thu hẹp lại để index AreaMap. */
-function areaFor(areas: AreaMap, id: string, dir: Direction): number {
+ *  (rộng hơn, còn "up"/"down" legacy) — helper này thu hẹp lại để index SizeMap. */
+function areaFor(sizes: SizeMap, id: string, dir: Direction): number {
   const key = dir === "left" ? "left" : "right";
-  return areas.get(id)?.[key] ?? 0;
+  return sizes.get(id)?.[key] ?? 0;
 }
 
-/** Bước 1: tổng chiều cao con trực tiếp (không tính cháu) mỗi hướng, + gap. */
-function computeAreaHeights(
+/** Chiều cao dọc mà subtree của `id` chiếm khi xếp cạnh anh em của chính nó. */
+function subtreeSize(sizes: SizeMap, id: string): number {
+  const s = sizes.get(id);
+  if (!s) return 0;
+  return Math.max(s.own, s.left, s.right);
+}
+
+/** Bước 1: size mỗi hướng = tổng size (đệ quy) các con trực tiếp + gap. */
+function computeSubtreeSizes(
   nodes: Record<string, MindNode>,
   rootId: string
-): AreaMap {
-  const areas: AreaMap = new Map();
+): SizeMap {
+  const sizes: SizeMap = new Map();
   // reverse(visibleSubtreeIds) = post-order hợp lệ (con luôn tính trước cha)
   // — xem chứng minh trong PR: đảo ngược pre-order của 1 cây cho post-order.
   const order = [...visibleSubtreeIds(nodes, rootId)].reverse();
@@ -273,25 +259,25 @@ function computeAreaHeights(
       const rightKids = childrenOf(nodes, id, "right");
       if (leftKids.length) {
         left =
-          leftKids.reduce((sum, k) => sum + nodeBoxSize(k).h, 0) +
+          leftKids.reduce((sum, k) => sum + subtreeSize(sizes, k.id), 0) +
           (leftKids.length + 1) * gap;
       }
       if (rightKids.length) {
         right =
-          rightKids.reduce((sum, k) => sum + nodeBoxSize(k).h, 0) +
+          rightKids.reduce((sum, k) => sum + subtreeSize(sizes, k.id), 0) +
           (rightKids.length + 1) * gap;
       }
     }
-    areas.set(id, { left, right });
+    sizes.set(id, { left, right, own: nodeBoxSize(node).h });
   }
-  return areas;
+  return sizes;
 }
 
-/** Bước 2: xếp con quanh tâm Y của cha, chỉ dựa trên chiều cao RIÊNG của con. */
-function positionChildrenNaive(
+/** Bước 2: xếp con quanh tâm Y của cha — mỗi con chiếm đúng 1 lát cao = size của nó. */
+function positionChildren(
   nodes: Record<string, MindNode>,
   rootId: string,
-  areas: AreaMap
+  sizes: SizeMap
 ): Record<string, MindNode> {
   const next: Record<string, MindNode> = { ...nodes };
   for (const id of visibleSubtreeIds(next, rootId)) {
@@ -303,10 +289,10 @@ function positionChildrenNaive(
       const level = node.level + 1;
       const gap = siblingEdgeGap(level);
       const off = branchOffset(dir, node, level);
-      const total = areaFor(areas, id, dir);
+      const total = areaFor(sizes, id, dir);
       let runningTop = node.y - total / 2 + gap;
       for (const kid of kids) {
-        const h = nodeBoxSize(next[kid.id]).h;
+        const h = subtreeSize(sizes, kid.id);
         next[kid.id] = {
           ...next[kid.id],
           x: node.x + off.x,
@@ -320,57 +306,8 @@ function positionChildrenNaive(
 }
 
 /**
- * Đẩy các anh em CÙNG hướng của `id` (dưới cùng 1 cha) ra xa thêm
- * `halfExcess` mỗi bên (trước lùi lên, sau lùi xuống — cả subtree dời theo
- * cứng, giữ cấu trúc trong), rồi lan truyền đúng lượng đó lên 1 nấc (anh em
- * của CHA `id`). Dừng khi tới root (không còn parent).
- */
-function pushSiblingsAndAncestors(
-  nodes: Record<string, MindNode>,
-  id: string,
-  halfExcess: number
-): Record<string, MindNode> {
-  const node = nodes[id];
-  if (!node?.parentId || !node.direction) return nodes;
-  const siblings = childrenOf(nodes, node.parentId, node.direction);
-  const idx = siblings.findIndex((s) => s.id === id);
-  let next = nodes;
-  siblings.forEach((sib, i) => {
-    if (i === idx) return;
-    const offset = i < idx ? -halfExcess : halfExcess;
-    next = shiftSubtree(next, sib.id, 0, offset);
-  });
-  return pushSiblingsAndAncestors(next, node.parentId, halfExcess);
-}
-
-/** Bước 3: node nào có vùng con vượt quá "chỗ" nó có giữa các anh em → đẩy hàng xóm ra xa. */
-function fixOverflow(
-  nodes: Record<string, MindNode>,
-  rootId: string,
-  areas: AreaMap
-): Record<string, MindNode> {
-  let next = nodes;
-  for (const id of visibleSubtreeIds(next, rootId)) {
-    const node = next[id];
-    const level = node.level + 1;
-    const gap = siblingEdgeGap(level);
-    const ownH = nodeBoxSize(node).h;
-    const slot = ownH + 2 * gap;
-    for (const dir of BRANCH_DIRECTIONS) {
-      if (childrenOf(next, id, dir).length === 0) continue;
-      const need = areaFor(areas, id, dir);
-      const excess = need - slot;
-      if (excess > 0) {
-        next = pushSiblingsAndAncestors(next, id, excess / 2);
-      }
-    }
-  }
-  return next;
-}
-
-/**
  * Reflow toàn bộ cây từ root. Rule: box/subtree **không được chồng lấn**;
- * sibling cách nhau ≥ siblingEdgeGap. Xem block comment phía trên cho 3 bước.
+ * sibling cách nhau ≥ siblingEdgeGap. Xem block comment phía trên cho 2 bước.
  */
 export function reflowAll(
   nodes: Record<string, MindNode>,
@@ -378,10 +315,8 @@ export function reflowAll(
 ): Record<string, MindNode> {
   const rid = rootId ?? findRootId(nodes);
   if (!rid || !nodes[rid]) return nodes;
-  const areas = computeAreaHeights(nodes, rid);
-  let next = positionChildrenNaive(nodes, rid, areas);
-  next = fixOverflow(next, rid, areas);
-  return next;
+  const sizes = computeSubtreeSizes(nodes, rid);
+  return positionChildren(nodes, rid, sizes);
 }
 
 /** Chỉ trái/phải (đã bỏ trên/dưới). */
